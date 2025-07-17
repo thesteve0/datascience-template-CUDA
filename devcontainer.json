@@ -1,0 +1,70 @@
+{
+  "name": "{{PROJECT_NAME}} PyTorch ML Development",
+  "image": "nvcr.io/nvidia/pytorch:25.04-py3",
+  
+  "runArgs": [
+    "--gpus=all",
+    "--shm-size=8g",
+    "--ipc=host",
+    "--memory=20g",
+    "--cpus=8",
+    "--ulimit=memlock=-1",
+    "--ulimit=stack=67108864",
+    "--security-opt=no-new-privileges"
+  ],
+  
+  "containerEnv": {
+    "NVIDIA_VISIBLE_DEVICES": "all",
+    "CUDA_VISIBLE_DEVICES": "0",
+    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True,max_split_size_mb:512,garbage_collection_threshold:0.6",
+    "PYTHONPATH": "/workspace/src",
+    "HF_HOME": "/workspace/.cache/huggingface",
+    "TORCH_HOME": "/workspace/.cache/torch",
+    "TRANSFORMERS_CACHE": "/workspace/.cache/huggingface/transformers"
+  },
+  
+  "mounts": [
+    "source={{PROJECT_NAME}}-models,target=/workspace/models,type=volume",
+    "source={{PROJECT_NAME}}-datasets,target=/workspace/data,type=volume",
+    "source={{PROJECT_NAME}}-cache-hf,target=/workspace/.cache/huggingface,type=volume",
+    "source={{PROJECT_NAME}}-cache-torch,target=/workspace/.cache/torch,type=volume"
+  ],
+  
+  "workspaceFolder": "/workspace",
+  
+  "customizations": {
+    "jetbrains": {
+      "backend": "IntelliJ",
+      "plugins": [
+        "PythonCore",
+        "Pythonid",
+        "com.jetbrains.bigdata.tools",
+        "org.jetbrains.completion.full.line",
+        "com.intellij.plugins.watcher",
+        "ru.adelf.idea.dotenv",
+        "net.ashald.envfile",
+        "org.jetbrains.plugins.github",
+        "org.jetbrains.plugins.gitlab",
+        "net.seesharpsoft.intellij.plugins.csv",
+        "mobi.hsz.idea.gitignore",
+        "com.intellij.datagen",
+        "org.jetbrains.plugins.rest"
+      ],
+      "vmOptions": [
+        "-Xmx6g",
+        "-Xms2g"
+      ]
+    }
+  },
+  
+  "forwardPorts": [6006],
+  
+  "postCreateCommand": "bash /workspace/.devcontainer/setup-environment.sh",
+  
+  "hostRequirements": {
+    "gpu": true,
+    "memory": "24gb"
+  },
+  
+  "remoteUser": "root"
+}
