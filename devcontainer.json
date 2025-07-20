@@ -4,7 +4,6 @@
   
   "runArgs": [
     "--gpus=all",
-    "--shm-size=8g",
     "--ipc=host",
     "--memory=20g",
     "--cpus=8",
