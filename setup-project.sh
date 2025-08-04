@@ -1,38 +1,41 @@
 #!/bin/bash
 set -e
 
-# Set PROJECT_NAME to current directory name
-PROJECT_NAME=$(basename "$PWD")
+# Parse arguments
+CLONE_REPO=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --clone-repo)
+            CLONE_REPO="$2"
+            shift 2
+            ;;
+        *)
+            echo "Usage: $0 [--clone-repo <git-url>]"
+            exit 1
+            ;;
+    esac
+done
 
+PROJECT_NAME=$(basename "$PWD")
 echo "Setting up $PROJECT_NAME development environment..."
 
-# Replace template placeholders in all files
-echo "Updating template files..."
+# Replace template placeholders
 find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i "s/{{PROJECT_NAME}}/$PROJECT_NAME/g"
 
-# Create required directories
-echo "Creating directory structure..."
-mkdir -p .devcontainer
-mkdir -p src/${PROJECT_NAME}
-mkdir -p {scripts,configs,tests,models,data,logs,experiments}
-mkdir -p .cache/{huggingface,torch,pip}
+# Create directories
+mkdir -p .devcontainer src/${PROJECT_NAME} {scripts,configs,tests,datasets,models}
 
-# Move devcontainer files to proper location
-echo "Setting up devcontainer..."
+# Move files
 mv devcontainer.json .devcontainer/
 mv setup-environment.sh .devcontainer/
-mv resolve-dependencies.py .devcontainer/
+mv resolve-dependencies.py scripts/
 
-# Create Python package structure
-touch src/__init__.py
-touch src/${PROJECT_NAME}/__init__.py
-touch tests/__init__.py
+# Create Python structure
+touch src/__init__.py src/${PROJECT_NAME}/__init__.py tests/__init__.py
 
-echo "Setup complete!"
-echo "Project: $PROJECT_NAME"
-echo ""
-echo "Next steps:"
-echo "1. Open IntelliJ Ultimate"
-echo "2. Remote Development → Create Dev Container"
-echo "3. Point to this project folder"
-echo "4. Select 'Create Dev Container and Mount Sources'"
+# Clone repo if specified
+if [ -n "$CLONE_REPO" ]; then
+    git clone "$CLONE_REPO" $(basename "$CLONE_REPO" .git)
+fi
+
+echo "Setup complete! Put images in ./datasets/"
