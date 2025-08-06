@@ -1,6 +1,6 @@
 # PyTorch ML DevContainer Template
 
-Template for PyTorch ML projects optimized for 12GB VRAM GPUs with safe dependency management and automatic external project integration.
+Template for PyTorch ML projects optimized for 12GB VRAM GPUs with safe dependency management and external project integration.
 
 ## What This Template Provides
 
@@ -9,14 +9,14 @@ Template for PyTorch ML projects optimized for 12GB VRAM GPUs with safe dependen
 - VSCode devcontainer integration
 - Persistent volumes for models, datasets, and caches
 - Dependency conflict resolution with `resolve-dependencies.py`
-- Automatic external project integration with directory mapping
+- External project integration with simple cloning
 
 **Key Features:**
 - Automatic GPU access configuration
 - Development tools: black, flake8, pre-commit, uv package manager
 - Safe dependency installation that respects NVIDIA container packages
-- Smart directory mapping for external ML/AI repositories
-- Automatic symlink creation and volume mount configuration
+- Fork-friendly external repo integration using bind mounts
+- Simple clone approach (no submodules or complex directory mapping)
 
 ## Quick Start
 
@@ -71,7 +71,9 @@ python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
 ### Option B: External Project Integration
 
-Integrate an existing ML/AI repository with automatic directory mapping.
+Integrate an existing ML/AI repository using simple cloning approach.
+
+**0. Fork the repository you are going to want to use**
 
 **1. Create Project (HOST)**
 ```bash
@@ -82,16 +84,16 @@ mkdir my-ml-project && cd my-ml-project
 Copy all template files to project directory
 
 **3. Run Setup with External Repo (HOST)**
+Use the git URL for your forked project. This way if you make changes you can save them back to your fork.
 ```bash
 chmod +x setup-project.sh && ./setup-project.sh --clone-repo https://github.com/user/ml-project.git
 ```
 
 This automatically:
-- Clones the external repository
-- Scans for common ML directories (data, datasets, models, checkpoints, results, logs, outputs, examples)
-- Creates `project-mappings.yaml` with discovered mappings
-- Updates `devcontainer.json` with volume mounts
-- Creates symlinks between template structure and external project
+- Clones the external forked repository to project root
+- Sets PYTHONPATH to point to cloned repo
+- Adds cloned repo to .gitignore
+- Configures devcontainer for external repo access
 
 **4. Open in VSCode (HOST)**
 ```bash
@@ -104,10 +106,10 @@ VSCode will prompt to reopen in container
 **6. Test Integration (DEVCONTAINER)**
 ```bash
 # Test external project
-cd cloned-project && python --version
+cd cloned-repo && python --version
 
-# Run project's test commands to identify missing mappings
-python test.py --help
+# Run project's commands to test setup
+python -c "import sys; print(sys.path)"
 ```
 
 **7. Install Dependencies (DEVCONTAINER)**
@@ -136,9 +138,7 @@ my-ml-project/
 ├── configs/                            # Configuration files
 ├── tests/                              # Test files
 ├── models/                             # Saved models (persistent volume)
-├── data/                               # Dataset cache (persistent volume)
-├── logs/                               # Training logs
-├── experiments/                        # Experiment tracking
+├── datasets/                           # Dataset cache (persistent volume)
 ├── .cache/                             # Cache directories (persistent volumes)
 │   ├── huggingface/
 │   └── torch/
@@ -153,30 +153,19 @@ my-ml-project/
 ```
 my-ml-project/
 ├── .devcontainer/
-│   ├── devcontainer.json              # Modified with volume mounts
-│   ├── devcontainer.json.backup       # Original backup
-│   └── setup-environment.sh
+│   ├── devcontainer.json              # Container configuration
+│   └── setup-environment.sh           # Environment setup script
 ├── scripts/
-│   └── resolve-dependencies.py
-├── external-project/                   # Cloned repository
-│   ├── datasets/ -> ../data            # Symlinked to persistent volume
-│   ├── checkpoints/ -> ../models       # Symlinked to persistent volume
-│   ├── results/ -> ../experiments      # Symlinked to persistent volume
-│   └── ...                             # Original project structure
-├── project-mappings.yaml               # Auto-generated mappings
-├── configs/                            # Configuration files
-├── tests/                              # Test files
-├── models/                             # Saved models (persistent volume)
-├── data/                               # Dataset cache (persistent volume)
-├── logs/                               # Training logs
-├── experiments/                        # Experiment tracking
-├── .cache/                             # Cache directories (persistent volumes)
-│   ├── huggingface/
-│   └── torch/
+│   └── resolve-dependencies.py        # Dependency conflict resolver
+├── external-repo/                     # Cloned repository (in .gitignore)
+│   ├── src/                            # Original project structure
+│   ├── data/                           # Original data directory
+│   ├── models/                         # Original models directory
+│   └── ...                             # All original files preserved
+├── .gitignore                          # Contains external-repo/
 ├── requirements.txt                    # Your dependencies
 ├── requirements-filtered.txt           # Filtered requirements (auto-generated)
 ├── nvidia-provided.txt                 # NVIDIA packages (auto-generated)
-├── pyproject.toml                      # Project configuration
 └── README.md
 ```
 
@@ -215,29 +204,6 @@ transformers>=4.30.0
 vllm>=0.3.0
 ```
 
-## External Project Integration Details
-
-### Automatic Directory Scanning
-The setup script scans for these common ML/AI directories:
-- `data` - Input datasets
-- `datasets` - Alternative dataset location
-- `models` - Model definitions/code
-- `checkpoints` - Saved model weights
-- `results` - Training/inference outputs
-- `logs` - Training logs
-- `outputs` - General outputs
-- `examples` - Example scripts/notebooks
-
-### Generated Files
-- **project-mappings.yaml**: Documents discovered directory mappings
-- **devcontainer.json.backup**: Original configuration backup
-- **Modified devcontainer.json**: Updated with volume mounts for discovered directories
-
-### Limitations
-- Does not handle git submodules (documented in code comments)
-- Pattern matching may miss custom directory structures
-- Manual intervention required for complex project layouts
-
 ## Development Workflow
 
 ### Package Management
@@ -266,6 +232,25 @@ python scripts/resolve-dependencies.py requirements.txt
 uv pip install --system -r requirements-filtered.txt
 ```
 
+### Working with External Projects
+
+**External repo approach:**
+- Uses simple git clone (not submodules)
+- Cloned repo added to .gitignore
+- PYTHONPATH points to cloned repo
+- No automatic directory mapping or symlinks
+- Fork-friendly: changes to template don't affect external repo
+
+**Making changes to external repo:**
+```bash
+# Work directly in cloned repo
+cd external-repo
+git checkout -b my-feature
+# Make changes
+git add . && git commit -m "My changes"
+git push origin my-feature
+```
+
 ### Code Quality
 
 ```bash
@@ -284,50 +269,36 @@ pre-commit run --all-files
 
 ### External Project Integration Issues
 
-**Missing Directory Mappings:**
-If the automatic scan missed directories, add them manually:
+**Clone conflicts:**
+If directory already exists, setup will fail. Remove existing directory or use different project name.
 
+**PYTHONPATH issues:**
 ```bash
-# Create symlink to template directory
-ln -s ../data external-project/missing-datasets
+# Check PYTHONPATH in container
+echo $PYTHONPATH
+# Should show: /workspaces/project-name/external-repo
 
-# For persistent data, add volume mount to devcontainer.json
-"source=project-missing-data,target=/workspaces/project/external-project/missing-datasets,type=volume"
-# Then rebuild container: Ctrl+Shift+P -> "Rebuild Container"
+# Verify Python can find modules
+python -c "import sys; print('\n'.join(sys.path))"
 ```
 
-**Directory Conflicts:**
+**Missing dependencies:**
 ```bash
-# Check discovered mappings
-cat project-mappings.yaml
+# Check external repo for dependency files
+ls external-repo/ | grep -E "(requirements|environment|pyproject)"
 
-# Remove conflicting symlinks and create regular directory
-rm external-project/conflicting-dir
-mkdir external-project/conflicting-dir
+# Extract and filter dependencies
+python scripts/resolve-dependencies.py external-repo/requirements.txt
+uv pip install --system -r requirements-filtered.txt
 ```
 
-**Testing Integration:**
+**Working with forks:**
 ```bash
-# Run external project's commands to identify missing mappings
-cd external-project && python test.py --help
-cd external-project && python train.py --help
-
-# Check for file access errors indicating missing mappings
-cd external-project && python -c "import sys; print(sys.path)"
-```
-
-**Manual Mapping Fixes (Live Container):**
-```bash
-# Create missing directories
-mkdir -p missing-dir
-
-# Create symlinks (no container rebuild needed)
-ln -s ../missing-dir external-project/expected-name
-
-# Update project-mappings.yaml for documentation
-echo "  - template_dir: \"missing-dir\"" >> project-mappings.yaml
-echo "    project_dir: \"external-project/expected-name\"" >> project-mappings.yaml
-echo "    type: \"manual\"" >> project-mappings.yaml
+# In external-repo directory
+git remote add upstream https://github.com/original/repo.git
+git fetch upstream
+git checkout -b sync-upstream
+git merge upstream/main
 ```
 
 ### Container Issues
@@ -347,9 +318,6 @@ cat requirements-filtered.txt | grep "# Skipped"
 
 # See NVIDIA-provided packages
 head -20 nvidia-provided.txt
-
-# Restore original devcontainer.json if needed
-cp .devcontainer/devcontainer.json.backup .devcontainer/devcontainer.json
 
 # Test dependency installation
 uv pip install --system -r requirements-filtered.txt
@@ -395,25 +363,18 @@ python scripts/resolve-dependencies.py requirements-tools.txt
 uv pip install --system -r requirements-tools-filtered.txt
 ```
 
-### Manual External Project Integration
-
-If automatic scanning fails:
+### Working with Multiple External Repos
 
 ```bash
-# Create project-mappings.yaml manually
-cat > project-mappings.yaml << EOF
-project:
-  name: "custom-project"
-  repo: "https://github.com/user/custom-project.git"
-  
-discovered_directories:
-  - template_dir: "data"
-    project_dir: "custom-project/custom-data"
-    type: "manual"
-EOF
+# Create separate template projects
+mkdir project-a && cd project-a
+# Copy template files and run setup
+./setup-project.sh --clone-repo https://github.com/user/repo-a.git
 
-# Create symlinks manually
-ln -s ../data custom-project/custom-data
+cd ../
+mkdir project-b && cd project-b  
+# Copy template files and run setup
+./setup-project.sh --clone-repo https://github.com/user/repo-b.git
 ```
 
 ## Hardware Requirements
@@ -423,12 +384,29 @@ ln -s ../data custom-project/custom-data
 - **Storage:** 1TB NVMe SSD
 - **OS:** Linux with NVIDIA drivers + Docker + NVIDIA Container Toolkit
 
+## Key Design Decisions
+
+**Fork-friendly approach:**
+- External repos cloned, not submoduled
+- Template changes don't affect external repo
+- Simple directory structure without complex mapping
+
+**Bind mounts throughout:**
+- Persistent volumes for models, datasets, caches
+- No symlinks to avoid filesystem complexity
+- Cross-platform compatibility
+
+**Error on conflicts:**
+- Setup fails fast on naming conflicts
+- Clear error messages for troubleshooting
+- No automatic conflict resolution
+
 ## Current Status
 
 ✅ **Completed:**
 - Devcontainer configuration with GPU access
 - Dependency conflict resolution system
-- External project integration with automatic directory mapping
+- External project integration with simple cloning
 - Project structure and tooling setup
 - VSCode integration with Python extensions
 
@@ -444,7 +422,7 @@ This template is designed to be forked and customized. Common customizations:
 
 - **Different base containers:** Update devcontainer.json image
 - **Additional tools:** Add to setup-environment.sh
-- **Custom directory patterns:** Modify scanning logic in setup-project.sh
+- **Custom external repo patterns:** Modify setup-project.sh logic
 
 ## License
 
