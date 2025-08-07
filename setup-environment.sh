@@ -21,7 +21,7 @@ apt-get update && apt-get install -y \
 # Install uv package manager
 echo "Installing uv package manager..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Install development tools
 pip install --no-cache-dir black flake8 pre-commit
