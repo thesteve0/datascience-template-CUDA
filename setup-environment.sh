@@ -26,5 +26,11 @@ export PATH="$HOME/.local/bin:$PATH"
 # Install development tools
 pip install --no-cache-dir black flake8 pre-commit
 
+# Configure git identity
+echo "Configuring git identity..."
+git config --global user.name "{{GIT_NAME}}"
+git config --global user.email "{{GIT_EMAIL}}"
+git config --global init.defaultBranch main
+
 echo "Setup complete!"
 echo "Put images in ./datasets/ - they'll appear in pytorch-CycleGAN-and-pix2pix/datasets/"

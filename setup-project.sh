@@ -19,8 +19,17 @@ done
 PROJECT_NAME=$(basename "$PWD")
 echo "Setting up $PROJECT_NAME development environment..."
 
+# Git identity configuration - CUSTOMIZE THESE
+GIT_NAME="Steven Pousty"
+GIT_EMAIL="steve.pousty@gmail.com"
+
+
 # Replace template placeholders
-find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i "s/{{PROJECT_NAME}}/$PROJECT_NAME/g"
+find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i \
+    -e "s/{{PROJECT_NAME}}/$PROJECT_NAME/g" \
+    -e "s/{{GIT_NAME}}/$GIT_NAME/g" \
+    -e "s/{{GIT_EMAIL}}/$GIT_EMAIL/g"
+
 
 # Create base directories
 mkdir -p .devcontainer scripts
