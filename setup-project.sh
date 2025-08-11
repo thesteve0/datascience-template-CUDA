@@ -16,19 +16,46 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+
+# ==============================================================================
+# --- Configuration ---
+# All project constants are defined here. Edit these values to change the setup.
+# ==============================================================================
+
+# Set the project name equal to the directory name
 PROJECT_NAME=$(basename "$PWD")
+
+# Automatically get Git identity from your global .gitconfig
+GIT_NAME=$(git config user.name)
+GIT_EMAIL=$(git config user.email)
+
+# Automatically get the Group ID (GID) of the user running this script
+HOST_GID=$(id -g)
+
+# Define a standard name for the shared group
+CONTAINER_GROUP_NAME=$(whoami)
+
+# Define the username and user ID for inside the container.
+# WARNING: Changing DEV_UID to a value that already exists in the base image
+# (like 1000) will cause the container build to fail. Use 1001 for reliability.
+DEV_USER=$(whoami)-devcontainer
+DEV_UID=2112
+
+# ==============================================================================
+# --- Script Logic ---
+# ==============================================================================
+
 echo "Setting up $PROJECT_NAME development environment..."
-
-# Git identity configuration - CUSTOMIZE THESE
-GIT_NAME="Steven Pousty"
-GIT_EMAIL="steve.pousty@gmail.com"
-
 
 # Replace template placeholders
 find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i \
     -e "s/{{PROJECT_NAME}}/$PROJECT_NAME/g" \
     -e "s/{{GIT_NAME}}/$GIT_NAME/g" \
-    -e "s/{{GIT_EMAIL}}/$GIT_EMAIL/g"
+    -e "s/{{GIT_EMAIL}}/$GIT_EMAIL/g" \
+    -e "s/{{HOST_GID}}/$HOST_GID/g" \
+    -e "s/{{CONTAINER_GROUP_NAME}}/$CONTAINER_GROUP_NAME/g" \
+    -e "s/{{DEV_USER}}/$DEV_USER/g"
+    -e "s/{{DEV_UID}}/$DEV_UID/g"
 
 
 # Create base directories

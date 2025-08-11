@@ -18,6 +18,34 @@ Template for PyTorch ML projects optimized for 12GB VRAM GPUs with safe dependen
 - Fork-friendly external repo integration using bind mounts
 - Simple clone approach (no submodules or complex directory mapping)
 
+## Prerequisites: SSH Agent for GitHub
+
+To push changes to GitHub or clone private repositories using SSH from within the devcontainer, you must have your SSH agent running on your **host machine** with your identities added. The container securely connects to this agent.
+
+#### 1. Check Your Agent
+On your **host machine's terminal**, run this command to see if your keys are loaded:
+```bash
+ssh-add -l
+```
+* ✅ If you see the fingerprint of your key, you're all set.
+* ❌ If you see The agent has no identities, you need to add your key:
+
+```bash
+# Adds your default key (e.g., ~/.ssh/id_rsa)
+# If you want the non-default then just add the path to the private key at the end
+# of the command
+ssh-add
+```
+* ❌ If you see Could not open a connection to your authentication agent, the agent isn't running. You need to start it first:
+
+```bash
+eval "$(ssh-agent -s)"
+ssh-add
+```
+
+### 2. Making Keys Persistent (Optional)
+The SSH agent "forgets" your keys when you reboot. To have them load automatically, you'll need to configure your system's Keychain (macOS) or add a script to your Autostart applications (Linux with KDE/GNOME).
+
 ## Quick Start
 
 ### Option A: Standalone Project
@@ -168,6 +196,54 @@ my-ml-project/
 ├── nvidia-provided.txt                 # NVIDIA packages (auto-generated)
 └── README.md
 ```
+
+## Project Storage and File Management
+
+This project uses a hybrid storage model to balance performance and ease of use. The main project directory is a **bind mount** for real-time code editing, while large datasets, models, and caches are stored in **named volumes** for better I/O performance.
+
+These two types of storage require different methods for adding files from your host computer.
+
+### Storage Layout
+
+| Path in Container                     | Type         | Purpose                                  | How to Add Files             |
+| :------------------------------------ | :----------- | :--------------------------------------- | :--------------------------- |
+| `/workspaces/{{PROJECT_NAME}}/`       | Bind Mount   | Main project source code & scripts.      | Copy files on host           |
+| `/workspaces/{{PROJECT_NAME}}/models` | Named Volume | Trained models & checkpoints.           | Use `docker cp`              |
+| `/workspaces/{{PROJECT_NAME}}/data`   | Named Volume | Large datasets.                          | Use `docker cp`              |
+| `/workspaces/{{PROJECT_NAME}}/.cache`| Named Volume | Caching for Hugging Face, PyTorch, etc. | Automatic                    |
+
+<br/>
+
+### Workflow 1: Adding Code to the Project (Bind Mount)
+
+Use this method for source code, configuration files, or anything else you plan to commit to Git.
+
+1.  **On your host machine,** copy or move files directly into your project folder (e.g., `~/git/{{PROJECT_NAME}}/src/`).
+2.  The files will appear instantly inside the devcontainer.
+3.  **Inside the devcontainer terminal,** you can now use `git add`, edit, and run the files as needed.
+
+---
+### Workflow 2: Adding Models or Datasets (Named Volumes)
+
+Use this method for large files that you don't want to commit to Git.
+
+1.  **On your host machine,** find your running container's ID or name:
+    ```bash
+    docker ps
+    ```
+2.  Use the `docker cp` command to copy the file from your host into the container's volume.
+
+    **Example for a model:**
+    ```bash
+    # Syntax: docker cp <path_on_host> <container_id>:<path_in_container>
+    docker cp ~/Downloads/my_model.pth d6c23051a929:/workspaces/{{PROJECT_NAME}}/models/
+    ```
+
+    **Example for a dataset:**
+    ```bash
+    docker cp ~/Downloads/my_dataset.zip d6c23051a929:/workspaces/{{PROJECT_NAME}}/data/
+    ```
+After the copy is complete, the files will be available inside the container at the specified path.
 
 ## Dependency Management
 
@@ -391,7 +467,7 @@ mkdir project-b && cd project-b
 - Template changes don't affect external repo
 - Simple directory structure without complex mapping
 
-**Bind mounts throughout:**
+**Strategic use of bind mounts and named volumes:**
 - Persistent volumes for models, datasets, caches
 - No symlinks to avoid filesystem complexity
 - Cross-platform compatibility
