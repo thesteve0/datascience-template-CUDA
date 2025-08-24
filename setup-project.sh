@@ -54,7 +54,7 @@ find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i \
     -e "s/{{GIT_EMAIL}}/$GIT_EMAIL/g" \
     -e "s/{{HOST_GID}}/$HOST_GID/g" \
     -e "s/{{CONTAINER_GROUP_NAME}}/$CONTAINER_GROUP_NAME/g" \
-    -e "s/{{DEV_USER}}/$DEV_USER/g"
+    -e "s/{{DEV_USER}}/$DEV_USER/g" \
     -e "s/{{DEV_UID}}/$DEV_UID/g"
 
 
