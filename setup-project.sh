@@ -29,12 +29,6 @@ PROJECT_NAME=$(basename "$PWD")
 GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
 
-# Automatically get the Group ID (GID) of the user running this script
-HOST_GID=$(id -g)
-
-# Define a standard name for the shared group
-CONTAINER_GROUP_NAME=$(whoami)
-
 # Define the username and user ID for inside the container.
 # WARNING: Changing DEV_UID to a value that already exists in the base image
 # (like 1000) will cause the container build to fail. Use 1001 for reliability.
@@ -52,8 +46,6 @@ find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i \
     -e "s/{{PROJECT_NAME}}/$PROJECT_NAME/g" \
     -e "s/{{GIT_NAME}}/$GIT_NAME/g" \
     -e "s/{{GIT_EMAIL}}/$GIT_EMAIL/g" \
-    -e "s/{{HOST_GID}}/$HOST_GID/g" \
-    -e "s/{{CONTAINER_GROUP_NAME}}/$CONTAINER_GROUP_NAME/g" \
     -e "s/{{DEV_USER}}/$DEV_USER/g" \
     -e "s/{{DEV_UID}}/$DEV_UID/g"
 
@@ -62,6 +54,7 @@ find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i \
 mkdir -p .devcontainer scripts
 
 # Move files
+mv Dockerfile .devcontainer/
 mv devcontainer.json .devcontainer/
 mv setup-environment.sh .devcontainer/
 mv resolve-dependencies.py scripts/

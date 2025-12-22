@@ -87,8 +87,8 @@ EOF
 # Filter dependencies to avoid conflicts
 python scripts/resolve-dependencies.py requirements.txt
 
-# Install filtered dependencies
-uv pip install --break-system-packages --system -r requirements-filtered.txt
+# Install filtered dependencies (requires sudo for system packages)
+sudo uv pip install --break-system-packages --system -r requirements-filtered.txt
 ```
 
 **7. Verify Setup (DEVCONTAINER)**
@@ -148,8 +148,8 @@ python -c "import sys; print(sys.path)"
 # Filter dependencies
 python scripts/resolve-dependencies.py requirements.txt
 
-# Install
-uv pip install --break-system-packages --system -r requirements-filtered.txt
+# Install (requires sudo for system packages)
+sudo uv pip install --break-system-packages --system -r requirements-filtered.txt
 ```
 
 ## Project Structure
@@ -285,17 +285,19 @@ vllm>=0.3.0
 ### Package Management
 
 **Using uv with system environment:**
-Since we're working with NVIDIA's pre-configured PyTorch container, we install into the system environment rather than creating virtual environments. This preserves NVIDIA's optimized CUDA and PyTorch installations:
+Since we're working with NVIDIA's pre-configured PyTorch container, we install into the system environment rather than creating virtual environments. This preserves NVIDIA's optimized CUDA and PyTorch installations.
+
+**Note:** System package modifications require `sudo`:
 
 ```bash
 # Add individual packages
-uv pip install --system transformers
+sudo uv pip install --system transformers
 
 # Install from requirements
-uv pip install --system -r requirements-filtered.txt
+sudo uv pip install --system -r requirements-filtered.txt
 
 # Install project in development mode
-uv pip install --system -e .
+sudo uv pip install --system -e .
 ```
 
 **Adding new dependencies:**
@@ -305,7 +307,7 @@ echo "wandb>=0.15.0" >> requirements.txt
 
 # DEVCONTAINER: Filter and install
 python scripts/resolve-dependencies.py requirements.txt
-uv pip install --system -r requirements-filtered.txt
+sudo uv pip install --system -r requirements-filtered.txt
 ```
 
 ### Working with External Projects
@@ -365,7 +367,7 @@ ls external-repo/ | grep -E "(requirements|environment|pyproject)"
 
 # Extract and filter dependencies
 python scripts/resolve-dependencies.py external-repo/requirements.txt
-uv pip install --system -r requirements-filtered.txt
+sudo uv pip install --system -r requirements-filtered.txt
 ```
 
 **Working with forks:**
@@ -396,7 +398,7 @@ cat requirements-filtered.txt | grep "# Skipped"
 head -20 nvidia-provided.txt
 
 # Test dependency installation
-uv pip install --system -r requirements-filtered.txt
+sudo uv pip install --system -r requirements-filtered.txt
 ```
 
 ### Performance Issues
@@ -432,11 +434,11 @@ For complex dependency chains:
 ```bash
 # Stage 1: Core ML libraries
 python scripts/resolve-dependencies.py requirements-core.txt
-uv pip install --system -r requirements-core-filtered.txt
+sudo uv pip install --system -r requirements-core-filtered.txt
 
 # Stage 2: Additional tools
 python scripts/resolve-dependencies.py requirements-tools.txt
-uv pip install --system -r requirements-tools-filtered.txt
+sudo uv pip install --system -r requirements-tools-filtered.txt
 ```
 
 ### Working with Multiple External Repos

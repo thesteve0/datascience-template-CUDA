@@ -3,33 +3,20 @@ set -e
 
 echo "Setting up {{PROJECT_NAME}} PyTorch ML environment..."
 
-# --- Permissions Block ---
-# Create a shared group with the host's GID and add the container user to it
-# This allows seamless file sharing between host and container
-CONTAINER_GROUP_NAME="{{CONTAINER_GROUP_NAME}}"
-HOST_GID={{HOST_GID}}
-DEV_USER={{DEV_USER}}
-
-# Create the shared group using the host's GID if it doesn't already exist
-if ! getent group ${CONTAINER_GROUP_NAME} > /dev/null && ! getent group ${HOST_GID} > /dev/null; then
-    sudo groupadd -g ${HOST_GID} ${CONTAINER_GROUP_NAME}
-fi
-
-# Add the container user to the shared group
-sudo usermod -aG ${CONTAINER_GROUP_NAME} ${DEV_USER}
-
-# Set ownership and group write permissions for the workspace
-sudo chown -R ${DEV_USER}:${CONTAINER_GROUP_NAME} /workspaces/{{PROJECT_NAME}}
-sudo chmod -R g+w /workspaces/{{PROJECT_NAME}}
-# --- End of Permissions Block ---
+# Note: No permissions block needed!
+# By deleting the ubuntu user in the Dockerfile, common-utils creates our user
+# with UID/GID that matches the host (typically 1000:1000), giving automatic
+# permission alignment. This is simpler than the previous group-sharing approach.
 
 WORKSPACE_DIR="/workspaces/{{PROJECT_NAME}}"
 
 # Generate nvidia-provided.txt
 echo "Extracting NVIDIA-provided packages..."
-if [ -f /etc/pip/constraint.txt ]; then
+if [ -f /etc/pip/constraint.txt ] && [ -s /etc/pip/constraint.txt ]; then
+    # constraint.txt exists and has content
     grep -E "==" /etc/pip/constraint.txt | sort > ${WORKSPACE_DIR}/nvidia-provided.txt
 else
+    # Fall back to pip freeze (NVIDIA 25.10+ has empty constraint.txt)
     pip freeze > ${WORKSPACE_DIR}/nvidia-provided.txt
 fi
 
@@ -39,6 +26,8 @@ apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv package manager
+# Note: NVIDIA 25.10+ includes uv at /usr/local/bin/uv, but we install
+# the latest version to ensure we have the newest features
 echo "Installing uv package manager..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
