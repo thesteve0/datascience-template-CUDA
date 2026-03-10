@@ -1,268 +1,275 @@
 # Next Session TODO - HIGH PRIORITY
+The top priority is to align this devcontainer template with the latest version of the ROCm template we have built. 
+That template uses uv, a .pth file, and supports intellij out of the box. 
+https://github.com/thesteve0/datascience-template-ROCm
 
-## Issue: torchao/transformers Version Conflict in NVIDIA 25.10 Container
+Claude code needs to compare that template project to this current one. Before the translation begins we are going to need
+to also update to the latest version of the NVIDIA PyTorch container. 
 
-**Status**: UNRESOLVED - Needs investigation and fix before template is production-ready
+We are moving to the new container in the docker file
+nvcr.io/nvidia/pytorch:26.02-py3
+https://docs.nvidia.com/deeplearning/frameworks/support-matrix/index.html
 
-**Discovered**: 2025-12-22 during docling GPU verification testing
+Is is based on DGX OS, which is NVIDIA's own operating system based on Ubuntu 
+https://docs.nvidia.com/dgx/dgx-os-7-user-guide/introduction.html
 
----
-
-## Problem Description
-
-When users install packages that depend on newer versions of `transformers` (like docling 2.65.0), they encounter a `ModuleNotFoundError` due to incompatibility between NVIDIA's bundled `torchao` and the newer `transformers` library.
-
-### Error Message
+It now has uv installed in the container. 
+There is no VENV but all the libraries are already installed
 ```
-ModuleNotFoundError: No module named 'torchao.prototype.safetensors.safetensors_utils'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "<string>", line 3, in <module>
-  File "/usr/local/lib/python3.12/dist-packages/docling/document_converter.py", line 66, in <module>
-    from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-  File "/usr/local/lib/python3.12/dist-packages/docling/pipeline/standard_pdf_pipeline.py", line 43, in <module>
-    from docling.models.code_formula_model import CodeFormulaModel, CodeFormulaModelOptions
-  File "/usr/local/lib/python3.12/dist-packages/docling/models/code_formula_model.py", line 17, in <module>
-    from transformers import AutoModelForImageTextToText, AutoProcessor
-  File "/usr/local/lib/python3.12/dist-packages/transformers/utils/import_utils.py", line 2320, in __getattr__
-    raise ModuleNotFoundError(
-ModuleNotFoundError: Could not import module 'AutoProcessor'. Are this object's requirements defined correctly?
+root@f5799077fdda:/workspace# uv pip list
+Using Python 3.12.3 environment at: /usr
+Package                          Version
+-------------------------------- ---------------------------------
+absl-py                          2.4.0
+aiohappyeyeballs                 2.6.1
+aiohttp                          3.13.3
+aiosignal                        1.4.0
+annotated-doc                    0.0.4
+annotated-types                  0.7.0
+anyio                            4.12.1
+apex                             0.1
+argon2-cffi                      25.1.0
+argon2-cffi-bindings             25.1.0
+arrow                            1.4.0
+asttokens                        3.0.1
+astunparse                       1.6.3
+async-lru                        2.1.0
+attrs                            25.4.0
+audioread                        3.1.0
+babel                            2.18.0
+beautifulsoup4                   4.14.3
+black                            26.1.0
+bleach                           6.3.0
+build                            1.4.0
+certifi                          2026.1.4
+cffi                             2.0.0
+charset-normalizer               3.4.4
+click                            8.3.1
+cmake                            3.31.6
+comm                             0.2.3
+contourpy                        1.3.3
+cuda-bindings                    13.1.1
+cuda-pathfinder                  1.3.4
+cuda-python                      13.1.1
+cycler                           0.12.1
+cython                           3.2.4
+datasets                         4.5.0
+debugpy                          1.8.20
+decorator                        5.2.1
+defusedxml                       0.7.1
+dill                             0.4.0
+dllist                           2.0.0
+dm-tree                          0.1.9
+docstring-parser                 0.17.0
+einops                           0.8.2
+execnet                          2.1.2
+executing                        2.2.1
+expecttest                       0.3.0
+fastjsonschema                   2.21.2
+filelock                         3.24.2
+flash-attn                       2.7.4.post1+nv26.2.44259020
+fonttools                        4.61.1
+fqdn                             1.5.1
+frozenlist                       1.8.0
+fsspec                           2025.10.0
+gast                             0.6.0
+grpcio                           1.78.0
+h11                              0.16.0
+hf-xet                           1.2.0
+httpcore                         1.0.9
+httpx                            0.28.1
+huggingface-hub                  1.4.1
+hypothesis                       6.130.8
+idna                             3.11
+importlib-metadata               8.7.1
+iniconfig                        2.3.0
+intel-openmp                     2021.4.0
+ipykernel                        7.2.0
+ipython                          9.10.0
+ipython-pygments-lexers          1.1.1
+isoduration                      20.11.0
+isort                            7.0.0
+jedi                             0.19.2
+jinja2                           3.1.6
+joblib                           1.5.3
+json5                            0.13.0
+jsonpointer                      3.0.0
+jsonschema                       4.26.0
+jsonschema-specifications        2025.9.1
+jupyter-client                   8.8.0
+jupyter-core                     5.9.1
+jupyter-events                   0.12.0
+jupyter-lsp                      2.3.0
+jupyter-server                   2.17.0
+jupyter-server-terminals         0.5.4
+jupyterlab                       4.5.4
+jupyterlab-code-formatter        3.0.3
+jupyterlab-pygments              0.3.0
+jupyterlab-server                2.28.0
+jupyterlab-tensorboard-pro       4.0.0
+jupytext                         1.19.1
+kiwisolver                       1.4.9
+lark                             1.3.1
+lazy-loader                      0.4
+librosa                          0.11.0
+lightning-thunder                0.2.7.dev0
+lightning-utilities              0.15.2
+lintrunner                       0.13.0
+llvmlite                         0.46.0
+looseversion                     1.3.0
+makefun                          1.16.0
+markdown                         3.10.2
+markdown-it-py                   4.0.0
+markupsafe                       3.0.3
+matplotlib                       3.10.8
+matplotlib-inline                0.2.1
+mdit-py-plugins                  0.5.0
+mdurl                            0.1.2
+mistune                          3.2.0
+mkl                              2021.1.1
+mkl-devel                        2021.1.1
+mkl-include                      2021.1.1
+ml-dtypes                        0.5.4
+mpmath                           1.3.0
+msgpack                          1.1.2
+multidict                        6.7.1
+multiprocess                     0.70.18
+mypy-extensions                  1.1.0
+nbclient                         0.10.4
+nbconvert                        7.17.0
+nbformat                         5.10.4
+nest-asyncio                     1.6.0
+networkx                         3.6.1
+ninja                            1.13.0
+notebook                         7.5.3
+notebook-shim                    0.2.4
+numba                            0.63.1
+numpy                            2.1.0
+nv-one-logger-core               2.3.1
+nv-one-logger-training-telemetry 2.3.1
+nvdlfw-inspect                   0.2.2
+nvfuser                          0.2.35+gitcf170f4
+nvidia-cuda-runtime-cu13         0.0.0a0
+nvidia-cudnn-frontend            1.18.0
+nvidia-cutlass-dsl               4.3.5
+nvidia-dali-cuda130              1.53.0
+nvidia-libnvcomp-cu13            5.1.0.21
+nvidia-ml-py                     13.590.48
+nvidia-modelopt                  0.41.0
+nvidia-nvimgcodec-cu13           0.7.0.49
+nvidia-nvjpeg                    13.0.3.75
+nvidia-nvjpeg2k-cu13             0.9.1.47
+nvidia-nvtiff-cu13               0.6.0.78
+nvidia-resiliency-ext            0.5.0
+nvtx                             0.2.14
+onnx                             1.18.0
+onnx-ir                          0.1.16
+onnxscript                       0.6.2
+opt-einsum                       3.4.0
+optree                           0.18.0
+overrides                        7.7.0
+packaging                        25.0
+pandas                           3.0.1
+pandocfilters                    1.5.1
+parso                            0.8.6
+pathspec                         1.0.4
+pexpect                          4.9.0
+pillow                           12.1.1
+pip                              26.0.1
+platformdirs                     4.9.2
+pluggy                           1.6.0
+polygraphy                       0.49.26
+pooch                            1.9.0
+prometheus-client                0.24.1
+prompt-toolkit                   3.0.52
+propcache                        0.4.1
+protobuf                         6.33.5
+psutil                           7.2.2
+ptyprocess                       0.7.0
+pulp                             3.3.0
+pure-eval                        0.2.3
+pyarrow                          23.0.1
+pybind11                         3.0.2
+pybind11-global                  3.0.2
+pycocotools                      2.0+nv0.8.1
+pycparser                        3.0
+pydantic                         2.12.5
+pydantic-core                    2.41.5
+pyparsing                        3.3.2
+pyproject-hooks                  1.2.0
+pytest                           8.1.1
+pytest-flakefinder               1.1.0
+pytest-rerunfailures             16.1
+pytest-shard                     0.1.2
+pytest-xdist                     3.8.0
+python-dateutil                  2.9.0.post0
+python-hostlist                  2.3.0
+python-json-logger               4.0.0
+pytokens                         0.4.1
+pytorch-triton                   3.6.0+git9844da95.nv26.2
+pyzmq                            27.1.0
+referencing                      0.37.0
+regex                            2026.1.15
+requests                         2.32.5
+rfc3339-validator                0.1.4
+rfc3986-validator                0.1.1
+rfc3987-syntax                   1.1.0
+rich                             14.3.2
+rpds-py                          0.30.0
+safetensors                      0.7.0
+scikit-learn                     1.8.0
+scipy                            1.17.0
+send2trash                       2.1.0
+setuptools                       81.0.0
+shellingham                      1.5.4
+six                              1.16.0
+sortedcontainers                 2.4.0
+soundfile                        0.13.1
+soupsieve                        2.8.3
+soxr                             1.0.0
+spin                             0.17
+stack-data                       0.6.3
+strenum                          0.4.15
+sympy                            1.14.0
+tabulate                         0.9.0
+tbb                              2021.13.1
+tensorboard                      2.20.0
+tensorboard-data-server          0.7.2
+tensorrt                         10.15.1.29
+terminado                        0.18.1
+threadpoolctl                    3.6.0
+tinycss2                         1.4.0
+tokenizers                       0.22.2
+toml                             0.10.2
+tomli                            2.4.0
+torch                            2.11.0a0+eb65b36914.nv26.2
+torch-tensorrt                   2.11.0a0
+torchao                          0.16.0+gita89eaab2
+torchdata                        0.11.0
+torchtitan                       0.2.1+git9f211ec1
+torchvision                      0.25.0a0+1e53952f.nv26.2.44259020
+tornado                          6.5.4
+tqdm                             4.67.3
+traitlets                        5.14.3
+transformer-engine               2.12.0+5671fd36
+triton-kernels                   1.0.0+git9844da95.nv26.2
+typeguard                        4.5.0
+typer                            0.24.0
+typer-slim                       0.24.0
+typing-extensions                4.15.0
+typing-inspection                0.4.2
+tyro                             1.0.6
+tzdata                           2025.3
+uri-template                     1.3.0
+urllib3                          2.6.3
+uv                               0.10.4
+wcwidth                          0.6.0
+webcolors                        25.10.0
+webencodings                     0.5.1
+websocket-client                 1.9.0
+werkzeug                         3.1.5
+wrapt                            2.1.1
+xxhash                           3.6.0
+yarl                             1.22.0
+zipp                             3.23.0
 ```
-
-### Version Conflict Details
-
-**NVIDIA-provided packages (from base container)**:
-- `torchao @ file:///opt/pytorch/ao` - Version: 0.14.0+git
-- `torch @ file:///opt/transfer/torch-2.9.0a0%2B145a3a7bda.nv25.10-...`
-- `transformers` - Initially provided by NVIDIA (compatible with their torchao)
-
-**User-installed packages** (example: docling):
-- `docling` - Version: 2.65.0
-- `transformers` - Version: 4.57.3 (upgraded as dependency of docling)
-
-**Root Cause**:
-- NVIDIA's `torchao` (0.14.0+git) is a custom build installed from a local wheel
-- Newer `transformers` versions (4.50+) expect `torchao.prototype.safetensors.safetensors_utils` module
-- NVIDIA's custom `torchao` doesn't include this module structure
-- When docling upgrades transformers to 4.57.3, it breaks compatibility with NVIDIA's torchao
-
-### Impact
-
-Users cannot use packages that depend on newer transformers versions, including:
-- `docling` (document parsing library)
-- Any other package that requires `transformers>=4.50`
-
-The error prevents these packages from importing, even though they're successfully installed.
-
----
-
-## Reproduction Steps
-
-1. Start with NVIDIA PyTorch 25.10 container (Ubuntu 24.04)
-2. Install docling: `sudo uv pip install --system docling`
-3. Try to import docling pipeline:
-   ```python
-   from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-   pipeline = StandardPdfPipeline()
-   ```
-4. Error occurs during import
-
----
-
-## Current Status
-
-### What Works ✅
-- Container builds successfully
-- UID matching works (1000:1000)
-- PyTorch CUDA available and working
-- GPU detected (device count: 1)
-- Accelerate library can use GPU
-- docling package installs successfully
-- Basic imports work (import docling, import torch, import transformers)
-
-### What Fails ❌
-- Importing docling's StandardPdfPipeline
-- Importing docling's DocumentConverter
-- Any transformers functionality that uses torchao quantization features
-
----
-
-## Potential Solutions (INVESTIGATE IN NEXT SESSION)
-
-### Option A: Pin transformers to Compatible Version (RECOMMENDED FIRST)
-**Approach**: Keep NVIDIA's torchao, downgrade transformers
-
-**Steps**:
-1. Determine the maximum transformers version compatible with torchao 0.14.0+git
-2. Test versions: Try `transformers<4.50`, `transformers<4.45`, etc.
-3. Update dependency resolution script to handle this constraint
-4. Document the pin in README with explanation
-
-**Pros**:
-- Preserves NVIDIA's optimized torchao
-- Least likely to break other NVIDIA optimizations
-- More conservative approach
-
-**Cons**:
-- Users can't use latest transformers features
-- May conflict with packages requiring newer transformers
-
-**Testing needed**:
-```bash
-# In container
-sudo uv pip install --system 'transformers<4.50'
-python -c "from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline; print('Success')"
-```
-
-### Option B: Upgrade torchao from PyPI
-**Approach**: Replace NVIDIA's torchao with official PyPI version
-
-**Steps**:
-1. Uninstall NVIDIA's torchao: `sudo pip uninstall torchao`
-2. Install PyPI torchao: `sudo uv pip install --system torchao`
-3. Test PyTorch functionality still works
-4. Test docling works
-
-**Pros**:
-- Latest transformers compatibility
-- Users can install any modern ML package
-
-**Cons**:
-- May lose NVIDIA-specific optimizations in torchao
-- Could break other NVIDIA packages that depend on their custom torchao
-- Riskier approach
-
-**Testing needed**:
-```bash
-# Check what depends on torchao
-pip show torchao
-# Check if uninstalling breaks anything
-sudo pip uninstall -y torchao
-sudo uv pip install --system torchao
-python -c "import torch; print(torch.cuda.is_available())"
-python -c "from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline; print('Success')"
-```
-
-### Option C: Add torchao to nvidia-provided.txt Filtering
-**Approach**: Treat this as a known NVIDIA package conflict that needs filtering
-
-**Steps**:
-1. Update `resolve-dependencies.py` to detect torchao conflicts
-2. Add special handling for transformers version constraints when torchao is present
-3. Document the limitation in README
-
-**Pros**:
-- Automates the workaround
-- Users get clear error message about the conflict
-
-**Cons**:
-- Doesn't solve the underlying issue
-- Users still limited to older transformers
-
-### Option D: Contact NVIDIA / Wait for Fix
-**Approach**: This may be a bug in NVIDIA's container
-
-**Steps**:
-1. Check NVIDIA PyTorch container release notes for known issues
-2. Test newer NVIDIA containers (25.11, 25.12 if available)
-3. File issue with NVIDIA if this is a bug
-
----
-
-## Investigation Checklist for Next Session
-
-- [ ] Check NVIDIA PyTorch 25.10 release notes for known torchao issues
-- [ ] Test if newer NVIDIA containers (25.11+) fix this
-- [ ] Determine exact transformers version range compatible with torchao 0.14.0+git
-- [ ] Test Option A: Downgrade transformers, verify docling works
-- [ ] Test Option B: Upgrade torchao, verify no NVIDIA optimizations broken
-- [ ] Check what other packages depend on NVIDIA's torchao:
-  ```bash
-  grep -r "torchao" /opt/pytorch/
-  pip show torchao
-  ```
-- [ ] Document findings in CHANGELOG.md
-- [ ] Update README.md with workaround if needed
-- [ ] Update `resolve-dependencies.py` if automatic filtering needed
-
----
-
-## Test Commands for Verification
-
-```bash
-# Check versions
-docker exec <container> pip show torchao transformers | grep -E "Name:|Version:"
-
-# Test transformers downgrade
-docker exec <container> sudo uv pip install --system 'transformers<4.50'
-docker exec <container> python -c "from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline; print('Success')"
-
-# Test torchao upgrade
-docker exec <container> sudo pip uninstall -y torchao
-docker exec <container> sudo uv pip install --system torchao
-docker exec <container> python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
-docker exec <container> python -c "from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline; print('Success')"
-
-# Verify GPU still works after any changes
-docker exec <container> python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}'); print(f'Devices: {torch.cuda.device_count()}')"
-```
-
----
-
-## Additional Context
-
-### Container Information
-- **Container**: NVIDIA PyTorch 25.10-py3
-- **Base OS**: Ubuntu 24.04
-- **Python**: 3.12.3
-- **CUDA**: Available and working
-- **uv**: Pre-installed at /usr/local/bin/uv
-- **/etc/pip/constraint.txt**: Empty (changed from previous versions)
-
-### Related Files
-- `/var/home/spousty/git/datascience-template-CUDA/resolve-dependencies.py` - May need updates
-- `/var/home/spousty/git/datascience-template-CUDA/README.md` - May need troubleshooting section
-- `/var/home/spousty/git/datascience-template-CUDA/CHANGELOG.md` - Document solution
-
-### Test Environment
-- **Test project**: `/tmp/test-cuda-template`
-- **Container name**: `beautiful_goldberg` (at time of discovery)
-- **nvidia-provided.txt**: Successfully generated via pip freeze (219 packages)
-
----
-
-## Success Criteria
-
-When this issue is resolved, the following should work:
-
-1. ✅ Install docling successfully: `sudo uv pip install --system docling`
-2. ✅ Import docling pipeline without errors:
-   ```python
-   from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-   pipeline = StandardPdfPipeline()
-   ```
-3. ✅ Verify GPU usage:
-   ```python
-   print(f'Pipeline device: {pipeline.device}')
-   # Should show: cuda or cuda:0
-   ```
-4. ✅ PyTorch CUDA still works
-5. ✅ Other NVIDIA optimizations still functional
-6. ✅ Solution documented in README.md
-7. ✅ CHANGELOG.md updated
-
----
-
-## Notes
-
-- This issue was discovered on 2025-12-22 during final verification testing
-- The Ubuntu 24.04 permission fix is complete and working
-- All other aspects of the template are functional
-- This is the last blocking issue before the template is production-ready
-- Priority: HIGH - blocks users from using modern transformer-based packages
-
----
-
-**IMPORTANT**: Start next session by reading this file and deciding on the investigation approach.
