@@ -51,8 +51,8 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/usr/bin/python",
-        "python.terminal.activateEnvironment": false,
+        "python.defaultInterpreterPath": "/workspaces/{{PROJECT_NAME}}/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
         "files.watcherExclude": {
           "**/.cache/**": true,
           "**/models/**": true,
@@ -60,15 +60,18 @@
         },
         "terminal.integrated.defaultProfile.linux": "bash",
         "editor.formatOnSave": true,
-        "python.formatting.provider": "black",
-        "python.linting.enabled": true,
-        "python.linting.flake8Enabled": true
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "ruff.enable": true,
+        "ruff.lint.enable": true,
+        "ruff.format.enable": true
       },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
-        "ms-python.flake8",
+        "charliermarsh.ruff",
         "github.copilot",
         "ms-toolsai.jupyter"
       ]

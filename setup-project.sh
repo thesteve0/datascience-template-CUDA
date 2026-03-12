@@ -42,7 +42,7 @@ DEV_UID=2112
 echo "Setting up $PROJECT_NAME development environment..."
 
 # Replace template placeholders
-find . -name "*.json" -o -name "*.sh" -o -name "*.py" | xargs sed -i \
+find . \( -name "*.json" -o -name "*.sh" -o -name "*.py" -o -name "*.toml" \) | xargs sed -i \
     -e "s/{{PROJECT_NAME}}/$PROJECT_NAME/g" \
     -e "s/{{GIT_NAME}}/$GIT_NAME/g" \
     -e "s/{{GIT_EMAIL}}/$GIT_EMAIL/g" \

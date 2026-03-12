@@ -8,17 +8,17 @@ Porting 25+ improvements from `datascience-template-ROCm` to `datascience-templa
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | Update Base Container | **CODE COMPLETE** - Awaiting manual verification |
-| 2 | Virtual Environment with .pth Bridge | Not started |
-| 3 | Dependency Resolution with uv | Not started |
+| 1 | Update Base Container | **VERIFIED** - GPU works, torch imports |
+| 2 | Virtual Environment with .pth Bridge | **VERIFIED** |
+| 3 | Dependency Resolution with uv | **VERIFIED** |
 | 4 | setup-project.sh with IDE Selection | Not started |
-| 5 | GPU Testing Scripts | Not started |
-| 6 | devcontainer.json for Ruff | Not started |
+| 5 | GPU Testing Scripts | **VERIFIED** |
+| 6 | devcontainer.json for Ruff | **PARTIALLY DONE** - interpreter path + ruff settings/extensions updated |
 | 7 | Documentation | Not started |
 
 ---
 
-## Phase 1: Update Base Container (CODE COMPLETE)
+## Phase 1: Update Base Container (VERIFIED)
 
 ### Changes Made
 - **Dockerfile**: Updated base image from `nvcr.io/nvidia/pytorch:25.10-py3` to `nvcr.io/nvidia/pytorch:26.02-py3`
@@ -30,37 +30,25 @@ Verified via `docker run`:
 - **Ubuntu user workaround**: Still needed (uid=1000 exists)
 - **PyTorch version**: 2.11.0a0+eb65b36
 
-### Manual Verification Required (NVIDIA GPU + VSCode)
-```bash
-# In temp test directory, copy template files then:
-./setup-project.sh
-code .
-# Reopen in container when prompted
-
-# In devcontainer terminal:
-nvidia-smi
-python -c "import torch; print(torch.cuda.is_available())"
-```
-
-**Expected results:**
-- nvidia-smi shows GPU
-- torch.cuda.is_available() returns True
-
-**After verification:** Commit and push, then continue to Phase 2.
+### Verification Results (PASSED)
+- nvidia-smi showed GPU
+- `torch.cuda.is_available()` returned True
+- `uv add transformers` FAILED (no pyproject.toml) → addressed in Phases 2+3
 
 ---
 
-## Phase 2: Virtual Environment with .pth Bridge (NOT STARTED)
+## Phase 2: Virtual Environment with .pth Bridge (CODE COMPLETE)
 
-### Planned Changes
+### Changes Made
 **File:** `setup-environment.sh`
 
-1. Create project `.venv` with `--system-site-packages` flag
+1. Create project `.venv` with `uv venv --system-site-packages` flag
 2. Validate Python version matches between .venv and container
-3. Create `_nvidia_bridge.pth` pointing to `/usr/local/lib/python3.12/dist-packages`
-4. Generate `nvidia-provided.txt` via `uv pip list --format=freeze`
-5. Replace black/flake8 installation with ruff
-6. Remove manual uv installation (already in container)
+3. Create `_nvidia_bridge.pth` pointing to `/usr/local/lib/pythonX.Y/dist-packages` (version detected dynamically)
+4. Generate `nvidia-provided.txt` via `pip freeze` (before venv creation)
+5. Replace black/flake8 installation with ruff (installed into .venv)
+6. Removed manual uv installation (already in container at /usr/local/bin/uv)
+7. Added `chown` to fix .venv ownership (postCreateCommand runs as root)
 
 ### Manual Verification Required
 ```bash
@@ -73,15 +61,15 @@ which ruff                       # ruff installed
 
 ---
 
-## Phase 3: Dependency Resolution with uv (NOT STARTED)
+## Phase 3: Dependency Resolution with uv (CODE COMPLETE)
 
-### Planned Changes
-**Files:** `pyproject.toml` (new template), `setup-environment.sh`
+### Changes Made
+**Files:** `pyproject.toml` (new template), `setup-environment.sh`, `setup-project.sh`
 
-1. Create template `pyproject.toml` with `[tool.uv]` section
-2. Configure `exclude-dependencies` to protect NVIDIA packages
-3. Update setup-environment.sh to generate exclusion list from nvidia-provided.txt
-4. Deprecate `resolve-dependencies.py` (or keep for legacy support)
+1. Created template `pyproject.toml` with `[tool.uv]` `constraint-dependencies` section
+2. `setup-environment.sh` reads `nvidia-provided.txt` and injects package==version constraints into `pyproject.toml` at container build time
+3. `setup-project.sh` updated to replace `{{PROJECT_NAME}}` in `*.toml` files
+4. `resolve-dependencies.py` kept for legacy support (deprecation in Phase 7 docs)
 
 ### Manual Verification Required
 ```bash
@@ -227,7 +215,24 @@ ls addingClaudeCode.md           # Should fail (file deleted)
 
 ## Resuming Work
 
-When resuming after Phase 1 verification:
-1. Verify Phase 1 passed on NVIDIA machine
-2. Commit Phase 1 changes
-3. Continue with Phase 2 implementation in setup-environment.sh
+When resuming after Phase 2+3 verification:
+1. Copy template to temp dir, run `setup-project.sh`, rebuild container
+2. Verify checklist below
+3. If passing, commit and continue with Phase 4 (IDE selection in setup-project.sh)
+
+### Phase 2+3 Verification Checklist
+```bash
+# In devcontainer terminal:
+ls .venv/                        # venv exists
+cat .venv/lib/python*/site-packages/_nvidia_bridge.pth  # shows /usr/local/lib/pythonX.Y/dist-packages
+.venv/bin/python -c "import torch; print(torch.cuda.is_available())"  # True
+which ruff                       # .venv/bin/ruff
+cat nvidia-provided.txt | wc -l  # non-zero package count
+cat pyproject.toml | grep "torch=="  # constraint injected
+
+# Critical integration test:
+uv add transformers              # torch should NOT be reinstalled
+python -c "import transformers; print(transformers.__version__)"
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+cat pyproject.toml | grep transformers  # listed in dependencies
+```

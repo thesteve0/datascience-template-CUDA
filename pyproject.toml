@@ -1,0 +1,14 @@
+[project]
+name = "{{PROJECT_NAME}}"
+version = "0.1.0"
+description = "PyTorch ML project"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+# Constraint dependencies prevent uv from reinstalling NVIDIA's optimized CUDA
+# packages (torch, numpy, etc.) when you run `uv add <package>`.
+# Auto-populated by .devcontainer/setup-environment.sh from nvidia-provided.txt.
+constraint-dependencies = [
+  # NVIDIA_PACKAGES_PLACEHOLDER
+]
