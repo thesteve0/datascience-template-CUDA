@@ -11,9 +11,9 @@ Porting 25+ improvements from `datascience-template-ROCm` to `datascience-templa
 | 1 | Update Base Container | **VERIFIED** - GPU works, torch imports |
 | 2 | Virtual Environment with .pth Bridge | **VERIFIED** |
 | 3 | Dependency Resolution with uv | **VERIFIED** |
-| 4 | setup-project.sh with IDE Selection | Not started |
-| 5 | GPU Testing Scripts | **VERIFIED** |
-| 6 | devcontainer.json for Ruff | **PARTIALLY DONE** - interpreter path + ruff settings/extensions updated |
+| 4 | setup-project.sh with IDE Selection | **DONE** - --ide flag, interactive prompt, .idea/ generation |
+| 5 | GPU Testing Scripts | **VERIFIED** - test-gpu.py only (hello-gpu.py removed as requirement) |
+| 6 | devcontainer.json for Ruff + JetBrains | **DONE** - ruff settings/extensions + jetbrains plugins block |
 | 7 | Documentation | Not started |
 
 ---
@@ -114,18 +114,16 @@ cat .idea/misc.xml | grep -i ruff   # Ruff configured
 
 ---
 
-## Phase 5: GPU Testing Scripts (NOT STARTED)
+## Phase 5: GPU Testing Scripts (VERIFIED)
 
-### Planned New Files
-- `hello-gpu.py` - Quick 30-second sanity check
-- `test-gpu.py` - Comprehensive benchmark
+### Files
+- `test-gpu.py` - Comprehensive benchmark (CPU vs GPU, NN training, performance comparison)
 
 ### Manual Verification Required
 ```bash
 # In devcontainer terminal:
-python hello-gpu.py              # Quick sanity check (~30s)
 python test-gpu.py               # Full benchmark (~2-3 min)
-# Both should show CUDA available and GPU name
+# Should show CUDA available, GPU name, and speedup metrics
 ```
 
 ---
@@ -199,11 +197,10 @@ ls addingClaudeCode.md           # Should fail (file deleted)
 5. `CLAUDE.md` - Architecture details
 
 ### To Create
-1. `pyproject.toml` - Template with uv exclusions
-2. `hello-gpu.py` - Quick GPU sanity check
-3. `test-gpu.py` - Comprehensive GPU benchmark
-4. `QUICKSTART.md` - 15-minute setup guide
-5. `TESTING.md` - Validation report
+1. `pyproject.toml` - Template with uv exclusions ✅ DONE
+2. `test-gpu.py` - Comprehensive GPU benchmark ✅ DONE
+3. `QUICKSTART.md` - 15-minute setup guide
+4. `TESTING.md` - Validation report
 
 ### To Delete
 1. `addingClaudeCode.md` - Remove Claude Code integration docs

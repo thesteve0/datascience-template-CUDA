@@ -75,6 +75,12 @@
         "github.copilot",
         "ms-toolsai.jupyter"
       ]
+    },
+    "jetbrains": {
+      "plugins": [
+        "com.koxudaxi.ruff",
+        "com.github.copilot"
+      ]
     }
   },
 

@@ -64,6 +64,32 @@ else
     echo "Warning: ${NVIDIA_DIST_PACKAGES} not found, skipping bridge creation"
 fi
 
+# Create stub dist-info entries so uv's resolver sees NVIDIA packages as already installed.
+# uv detects installed packages by reading METADATA from .dist-info directories inside the
+# target environment's site-packages. Without these stubs, uv sees an empty venv and
+# tries to reinstall NVIDIA packages, overwriting CUDA-optimized builds with generic PyPI
+# versions. With stubs present, uv resolves them as satisfied and skips reinstallation.
+# Actual Python imports still come from NVIDIA's real installation via the .pth bridge above.
+echo "Creating stub dist-info entries for NVIDIA packages in venv..."
+STUB_COUNT=0
+for dist_info_dir in "${NVIDIA_DIST_PACKAGES}"/*.dist-info; do
+    [ -d "$dist_info_dir" ] || continue
+    pkg_dirname=$(basename "$dist_info_dir")
+    target_dir="${VENV_SITE}/${pkg_dirname}"
+    if [ ! -d "$target_dir" ]; then
+        mkdir -p "$target_dir"
+        # METADATA is the only mandatory file uv reads for package detection
+        [ -f "${dist_info_dir}/METADATA" ] && \
+            cp "${dist_info_dir}/METADATA" "${target_dir}/METADATA"
+        # INSTALLER marks the package as managed by the container, not uv
+        printf 'nvidia-container\n' > "${target_dir}/INSTALLER"
+        # Empty RECORD avoids errors from tools that expect the file to exist
+        touch "${target_dir}/RECORD"
+        STUB_COUNT=$((STUB_COUNT + 1))
+    fi
+done
+echo "Created ${STUB_COUNT} stub dist-info entries for NVIDIA packages"
+
 # Inject NVIDIA package constraints into pyproject.toml.
 # This is a second safety layer on top of --system-site-packages: even if uv
 # tries to re-resolve torch/numpy, the constraint pins lock it to what NVIDIA

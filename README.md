@@ -8,12 +8,12 @@ Template for PyTorch ML projects optimized for 12GB VRAM GPUs with safe dependen
 - NVIDIA PyTorch container (25.04-py3) with CUDA support
 - VSCode devcontainer integration
 - Persistent volumes for models, datasets, and caches
-- Dependency conflict resolution with `resolve-dependencies.py`
+- Safe dependency management that preserves NVIDIA's CUDA-optimized packages
 - External project integration with simple cloning
 
 **Key Features:**
 - Automatic GPU access configuration
-- Development tools: black, flake8, pre-commit, uv package manager
+- Development tools: ruff, pre-commit, uv package manager
 - Safe dependency installation that respects NVIDIA container packages
 - Fork-friendly external repo integration using bind mounts
 - Simple clone approach (no submodules or complex directory mapping)
@@ -76,19 +76,8 @@ code .
 
 **6. Install Dependencies (DEVCONTAINER)**
 ```bash
-# Create requirements.txt with your ML dependencies
-cat > requirements.txt << EOF
-transformers>=4.30.0
-datasets
-accelerate
-wandb
-EOF
-
-# Filter dependencies to avoid conflicts
-python scripts/resolve-dependencies.py requirements.txt
-
-# Install filtered dependencies (requires sudo for system packages)
-sudo uv pip install --break-system-packages --system -r requirements-filtered.txt
+# Add packages directly — uv handles NVIDIA conflict avoidance automatically
+uv add transformers datasets accelerate wandb
 ```
 
 **7. Verify Setup (DEVCONTAINER)**
@@ -142,14 +131,8 @@ python -c "import sys; print(sys.path)"
 
 **7. Install Dependencies (DEVCONTAINER)**
 ```bash
-# Extract dependencies from external project
-# (from requirements.txt, environment.yml, pyproject.toml, etc.)
-
-# Filter dependencies
-python scripts/resolve-dependencies.py requirements.txt
-
-# Install (requires sudo for system packages)
-sudo uv pip install --break-system-packages --system -r requirements-filtered.txt
+# Add packages directly — uv handles NVIDIA conflict avoidance automatically
+uv add -r external-repo/requirements.txt
 ```
 
 ## Project Structure
@@ -247,68 +230,79 @@ After the copy is complete, the files will be available inside the container at 
 
 ## Dependency Management
 
-### How Conflict Resolution Works
+### How NVIDIA Package Isolation Works
 
-1. **NVIDIA Package Detection:**
-   - Extracts packages from NVIDIA container to `nvidia-provided.txt`
-   - Example: `torch==2.5.0+cu124`, `numpy==1.26.4`
+The NVIDIA PyTorch container installs 200+ packages (torch, numpy, flash-attn, etc.) into
+`/usr/local/lib/pythonX.Y/dist-packages` — a system path outside any virtual environment.
+`uv`'s resolver normally cannot see these packages, causing it to reinstall them with generic
+PyPI builds that lack CUDA optimizations.
 
-2. **Conflict Filtering:**
-   - `resolve-dependencies.py` compares your requirements against NVIDIA packages
-   - Skips packages that would conflict: `torch`, `numpy`, `PIL`, etc.
-   - Comments out conflicts in filtered file with explanation
+`setup-environment.sh` solves this with a three-layer approach, applied automatically on
+container creation:
 
-3. **Safe Installation:**
-   - Only installs packages that don't conflict with NVIDIA's optimized versions
-   - Preserves NVIDIA's CUDA-optimized builds
+1. **Project venv** (`.venv`) created with `--system-site-packages` so Python can import from
+   NVIDIA's paths.
 
-### Example Filter Output
+2. **`.pth` bridge** (`_nvidia_bridge.pth`) added to the venv's `site-packages/`, pointing to
+   NVIDIA's `dist-packages/` directory. This makes `import torch` work inside the venv.
 
-**Original requirements.txt:**
-```
-torch>=2.0.0
-transformers>=4.30.0
-numpy>=1.24.0
-vllm>=0.3.0
-```
+3. **Stub `.dist-info` entries** created in the venv's `site-packages/` for every NVIDIA package.
+   uv detects installed packages by reading `METADATA` from `.dist-info` directories inside the
+   target environment. With stubs present, uv's resolver sees NVIDIA packages as already
+   satisfied and skips reinstalling them. Only genuinely new packages are written to the venv.
 
-**Generated requirements-filtered.txt:**
-```
-# torch>=2.0.0  # Skipped: NVIDIA provides torch==2.5.0+cu124
-transformers>=4.30.0
-# numpy>=1.24.0  # Skipped: NVIDIA provides numpy==1.26.4
-vllm>=0.3.0
+4. **`constraint-dependencies`** injected into `pyproject.toml` as a second safety layer, pinning
+   all NVIDIA packages to their exact container versions to prevent accidental upgrades.
+
+The result: `uv add transformers` installs only transformers (and its non-NVIDIA deps) — numpy,
+torch, and the rest remain NVIDIA's optimized CUDA builds.
+
+### Package Detection: `nvidia-provided.txt`
+
+On container startup, `setup-environment.sh` extracts the full list of NVIDIA-provided packages
+to `nvidia-provided.txt`. This file is used to populate the `constraint-dependencies` block in
+`pyproject.toml`. You can inspect it to see exactly what NVIDIA ships:
+
+```bash
+cat nvidia-provided.txt | grep -E "torch|numpy|flash"
 ```
 
 ## Development Workflow
 
 ### Package Management
 
-**Using uv with system environment:**
-Since we're working with NVIDIA's pre-configured PyTorch container, we install into the system environment rather than creating virtual environments. This preserves NVIDIA's optimized CUDA and PyTorch installations.
-
-**Note:** System package modifications require `sudo`:
+The project uses a `.venv` virtual environment with NVIDIA's packages visible to uv via stub
+`.dist-info` entries (see [Dependency Management](#dependency-management) for details). You can
+use standard `uv` commands without `sudo` and without any pre-filtering step:
 
 ```bash
-# Add individual packages
-sudo uv pip install --system transformers
+# Add a single package
+uv add transformers
 
-# Install from requirements
-sudo uv pip install --system -r requirements-filtered.txt
+# Add multiple packages
+uv add wandb accelerate datasets
 
-# Install project in development mode
-sudo uv pip install --system -e .
+# Add from a requirements file
+uv add -r requirements.txt
+
+# Install project in development mode (if pyproject.toml has a src layout)
+uv pip install -e .
 ```
 
-**Adding new dependencies:**
-```bash
-# HOST: Add to requirements.txt
-echo "wandb>=0.15.0" >> requirements.txt
+**What NOT to do:**
 
-# DEVCONTAINER: Filter and install
-python scripts/resolve-dependencies.py requirements.txt
-sudo uv pip install --system -r requirements-filtered.txt
-```
+| Command | Why to avoid |
+|---------|-------------|
+| `uv sync --exact` | Removes packages not in `pyproject.toml` — would delete NVIDIA stub entries and break the environment |
+| `uv remove torch` / `uv remove numpy` | Empty `RECORD` in stubs causes uninstall to fail; these are NVIDIA's packages and should not be removed |
+| `pip install <pkg>` or `sudo uv pip install --system <pkg>` | Bypasses the venv, may overwrite NVIDIA packages in dist-packages |
+
+If you need to update a package that NVIDIA also ships (e.g., a newer transformers), be aware
+that uv will install it into the venv alongside the NVIDIA stub — the venv version takes
+precedence for imports. This is intentional for packages where you need a newer version than
+NVIDIA provides. The `constraint-dependencies` block in `pyproject.toml` prevents unintentional
+version changes; remove the constraint for a specific package only if you explicitly want to
+upgrade it.
 
 ### Working with External Projects
 
@@ -366,7 +360,7 @@ python -c "import sys; print('\n'.join(sys.path))"
 ls external-repo/ | grep -E "(requirements|environment|pyproject)"
 
 # Extract and filter dependencies
-python scripts/resolve-dependencies.py external-repo/requirements.txt
+# Note: uv automatically avoids overwriting NVIDIA packages — no filtering step needed
 sudo uv pip install --system -r requirements-filtered.txt
 ```
 
@@ -389,17 +383,29 @@ nvidia-smi
 python -c "import torch; print(torch.cuda.device_count())"
 ```
 
-### Dependency Conflicts
+### Dependency Issues
+
+**Verify uv sees NVIDIA packages as installed:**
 ```bash
-# Check filtered dependencies
-cat requirements-filtered.txt | grep "# Skipped"
-
-# See NVIDIA-provided packages
-head -20 nvidia-provided.txt
-
-# Test dependency installation
-sudo uv pip install --system -r requirements-filtered.txt
+# Should list torch, numpy, flash-attn, etc. — all from NVIDIA stubs
+uv pip list | grep -E "torch|numpy|flash"
 ```
+
+**Verify NVIDIA builds are still active after installing new packages:**
+```bash
+# File path should point to dist-packages, NOT .venv/lib/...
+python -c "import numpy; print(numpy.__file__)"
+# Expected: /usr/local/lib/python3.12/dist-packages/numpy/__init__.py
+
+python -c "import torch; print(torch.cuda.is_available())"
+# Expected: True
+```
+
+**If a package conflicts with NVIDIA's version:**
+The `constraint-dependencies` block in `pyproject.toml` pins NVIDIA packages. If you explicitly
+need a newer version, remove that package's constraint from `pyproject.toml` before running
+`uv add`. Understand that this will install the PyPI version into the venv, shadowing NVIDIA's
+CUDA-optimized build — test GPU functionality after doing so.
 
 ### Performance Issues
 ```bash
@@ -415,30 +421,29 @@ docker stats
 
 ## Advanced Usage
 
-### Custom Dependency Lists
-
-If you need to use a different base container:
-
-```bash
-# Extract packages from your specific container
-docker run --rm your-container:tag pip freeze > custom-nvidia-provided.txt
-
-# Use custom list
-python scripts/resolve-dependencies.py requirements.txt --nvidia-file custom-nvidia-provided.txt
-```
-
 ### Multi-Stage Dependency Installation
 
-For complex dependency chains:
+For complex dependency chains, `uv add` handles each stage naturally:
 
 ```bash
 # Stage 1: Core ML libraries
-python scripts/resolve-dependencies.py requirements-core.txt
-sudo uv pip install --system -r requirements-core-filtered.txt
+uv add -r requirements-core.txt
 
 # Stage 2: Additional tools
-python scripts/resolve-dependencies.py requirements-tools.txt
-sudo uv pip install --system -r requirements-tools-filtered.txt
+uv add -r requirements-tools.txt
+```
+
+### Inspecting What NVIDIA Provides
+
+If you need to see exactly what packages and versions NVIDIA ships (e.g., to understand what
+`constraint-dependencies` is pinning):
+
+```bash
+# Full list of NVIDIA-provided packages (generated on container startup)
+cat nvidia-provided.txt
+
+# Check if a specific package is NVIDIA-provided
+grep -i "numpy" nvidia-provided.txt
 ```
 
 ### Working with Multiple External Repos
@@ -478,6 +483,16 @@ mkdir project-b && cd project-b
 - Setup fails fast on naming conflicts
 - Clear error messages for troubleshooting
 - No automatic conflict resolution
+
+**NVIDIA package isolation via stub dist-info (not symlinks):**
+- Earlier iterations tried symlinking `.dist-info` directories from NVIDIA's path into the venv.
+  This caused `Permission denied` errors when uv tried to write through symlinks into NVIDIA's
+  read-only system directories.
+- The current approach copies only the `METADATA` file from each `.dist-info` into a fresh stub
+  directory in the venv. uv reads `METADATA` for resolution but never needs to write to it for
+  detection purposes. NVIDIA's actual files are never touched.
+- Stub entries are recreated from scratch on every container build, so they always match the
+  container's actual NVIDIA package versions.
 
 ## Current Status
 

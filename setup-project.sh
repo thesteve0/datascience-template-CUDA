@@ -3,14 +3,19 @@ set -e
 
 # Parse arguments
 CLONE_REPO=""
+IDE_CHOICE=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --clone-repo)
             CLONE_REPO="$2"
             shift 2
             ;;
+        --ide)
+            IDE_CHOICE="$2"
+            shift 2
+            ;;
         *)
-            echo "Usage: $0 [--clone-repo <git-url>]"
+            echo "Usage: $0 [--clone-repo <git-url>] [--ide <vscode|jetbrains|both>]"
             exit 1
             ;;
     esac
@@ -36,6 +41,26 @@ DEV_USER=$(whoami)-devcontainer
 DEV_UID=2112
 
 # ==============================================================================
+# --- IDE Selection ---
+# ==============================================================================
+
+if [ -z "$IDE_CHOICE" ]; then
+    echo ""
+    echo "Which IDE(s) do you want to configure?"
+    echo "  1) VSCode only"
+    echo "  2) JetBrains only (PyCharm / IntelliJ IDEA)"
+    echo "  3) Both VSCode and JetBrains"
+    read -p "Enter choice [1-3, default: 1]: " ide_num
+    case $ide_num in
+        2) IDE_CHOICE="jetbrains" ;;
+        3) IDE_CHOICE="both" ;;
+        *) IDE_CHOICE="vscode" ;;
+    esac
+fi
+
+echo "IDE configuration: $IDE_CHOICE"
+
+# ==============================================================================
 # --- Script Logic ---
 # ==============================================================================
 
@@ -50,14 +75,82 @@ find . \( -name "*.json" -o -name "*.sh" -o -name "*.py" -o -name "*.toml" \) | 
     -e "s/{{DEV_UID}}/$DEV_UID/g"
 
 
-# Create base directories
+# Create base directories and move devcontainer infrastructure files.
+# These are always needed regardless of IDE — both VSCode and JetBrains Gateway
+# read .devcontainer/devcontainer.json to launch the container.
 mkdir -p .devcontainer scripts
-
-# Move files
 mv Dockerfile .devcontainer/
 mv devcontainer.json .devcontainer/
 mv setup-environment.sh .devcontainer/
 mv resolve-dependencies.py scripts/
+
+# Generate JetBrains .idea/ configuration files.
+# These tell PyCharm/IntelliJ which Python SDK to use, enable Git, and configure
+# the Ruff plugin. workspace.xml is intentionally omitted — it's user-specific state
+# and should not be committed to the project repository.
+if [ "$IDE_CHOICE" = "jetbrains" ] || [ "$IDE_CHOICE" = "both" ]; then
+    echo "Generating JetBrains .idea/ configuration..."
+    mkdir -p .idea
+
+    # Python module definition — type PYTHON_MODULE tells PyCharm this is a Python project.
+    cat > ".idea/${PROJECT_NAME}.iml" << 'IDEEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$" />
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
+IDEEOF
+
+    # Module registry — references the .iml file above.
+    # $PROJECT_DIR$ is an IntelliJ path macro, not a shell variable; \$ escapes it.
+    cat > ".idea/modules.xml" << IDEEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://\$PROJECT_DIR\$/.idea/${PROJECT_NAME}.iml" filepath="\$PROJECT_DIR\$/.idea/${PROJECT_NAME}.iml" />
+    </modules>
+  </component>
+</project>
+IDEEOF
+
+    # Python SDK — points PyCharm at the .venv created by setup-environment.sh.
+    # PyCharm will auto-discover the interpreter if the SDK name doesn't match exactly;
+    # the project-jdk-type="Python SDK" is what triggers that discovery.
+    cat > ".idea/misc.xml" << 'IDEEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (.venv)" project-jdk-type="Python SDK" />
+</project>
+IDEEOF
+
+    # Git integration — maps the project root to the Git VCS.
+    cat > ".idea/vcs.xml" << 'IDEEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+  </component>
+</project>
+IDEEOF
+
+    # Standard .gitignore for .idea/ — excludes user-specific files from version control.
+    cat > ".idea/.gitignore" << 'IDEEOF'
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+IDEEOF
+
+    echo "JetBrains .idea/ configuration created"
+fi
 
 if [ -n "$CLONE_REPO" ]; then
     # External repo mode
@@ -93,20 +186,30 @@ else
     touch src/__init__.py src/${PROJECT_NAME}/__init__.py tests/__init__.py
 fi
 
-if [ -n "$CLONE_REPO" ]; then
-    echo "Next steps:"
-    echo "1. Open in VSCode: code ."
-    echo "2. Reopen in Container when prompted"
-    echo "3. Extract and filter dependencies:"
-    echo "   - Create requirements.txt with project dependencies"
-    echo "   - python scripts/resolve-dependencies.py requirements.txt"
-    echo "   - uv pip install --system -r requirements-filtered.txt"
-else
-    echo "Next steps:"
-    echo "1. Open in VSCode: code ."
-    echo "2. Create requirements.txt with your ML dependencies"
-    echo "3. Reopen in Container when prompted"
-    echo "4. In container terminal:"
-    echo "   - python scripts/resolve-dependencies.py requirements.txt"
-    echo "   - uv pip install --system -r requirements-filtered.txt"
+echo ""
+echo "=========================================="
+echo "Setup complete! Project: $PROJECT_NAME"
+echo "IDE: $IDE_CHOICE"
+echo "=========================================="
+echo ""
+
+if [ "$IDE_CHOICE" = "vscode" ] || [ "$IDE_CHOICE" = "both" ]; then
+    echo "VSCode next steps:"
+    echo "  1. code ."
+    echo "  2. Reopen in Container when prompted"
+    echo "  3. In container terminal: uv add <package>"
+    echo ""
 fi
+
+if [ "$IDE_CHOICE" = "jetbrains" ] || [ "$IDE_CHOICE" = "both" ]; then
+    echo "JetBrains next steps:"
+    echo "  1. Open JetBrains Gateway"
+    echo "  2. New Connection > Dev Containers > select this folder"
+    echo "  3. Gateway builds the container and opens PyCharm/IntelliJ inside it"
+    echo "  4. In the IDE terminal: uv add <package>"
+    echo "  Note: Ruff and GitHub Copilot plugins install automatically via devcontainer.json"
+    echo ""
+fi
+
+echo "Verify GPU access (in container terminal):"
+echo "  python test-gpu.py"
