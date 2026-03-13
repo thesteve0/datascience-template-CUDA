@@ -193,8 +193,8 @@ Add JetBrains customization block.
 - Deleted `addingClaudeCode.md` ✅
 - Deleted `resolve-dependencies.py` ✅ (replaced by uv workflow with pyproject.toml)
 
-**Not done (deferred):**
-- `QUICKSTART.md` - 15-minute setup guide (future)
+**Also completed:**
+- `QUICKSTART.md` ✅
 
 ---
 
@@ -220,11 +220,11 @@ Add JetBrains customization block.
 4. `setup-project.sh` - IDE selection, .idea/ creation
 5. `CLAUDE.md` - Architecture details
 
-### To Create
-1. `pyproject.toml` - Template with uv exclusions ✅ DONE
-2. `test-gpu.py` - Comprehensive GPU benchmark ✅ DONE
-3. `QUICKSTART.md` - 15-minute setup guide
-4. `TESTING.md` - Validation report
+### Created
+1. `pyproject.toml` ✅
+2. `test-gpu.py` ✅
+3. `QUICKSTART.md` ✅
+4. `iterate-test-jetbrains-env.sh` ✅
 
 ### Deleted
 1. `addingClaudeCode.md` ✅
