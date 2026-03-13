@@ -53,10 +53,11 @@ uv remove numpy  # (or any other NVIDIA-provided package)
 ## Architecture
 
 ### Template Files (before setup-project.sh runs)
-- `Dockerfile` - Wraps NVIDIA PyTorch container, removes Ubuntu 24.04's pre-existing `ubuntu` user to fix UID mapping
-- `devcontainer.json` - Container config with GPU access, named volumes, SSH agent forwarding
-- `setup-environment.sh` - Runs inside container on creation; creates venv, .pth bridge, stub dist-info entries, injects constraints into pyproject.toml, installs dev tools
-- `setup-project.sh` - Runs on host to initialize project structure and replace template placeholders
+- `Dockerfile` - Wraps NVIDIA PyTorch container, removes Ubuntu 24.04's pre-existing `ubuntu` user to free UID 1000 for the container dev user
+- `devcontainer.json` - Container config with GPU access, named volumes, SSH agent forwarding, VSCode and JetBrains customizations
+- `setup-environment.sh` - Runs inside container on creation; creates venv, .pth bridge, stub dist-info entries, injects constraints into pyproject.toml, runs `uv lock` (for IDE discovery), installs dev tools
+- `setup-project.sh` - Runs on host to initialize project structure, replace template placeholders, and generate IDE config files
+- `iterate-test-jetbrains-env.sh` - Teardown/rebuild helper for iterating on JetBrains devcontainer setup during development
 
 ### After setup-project.sh runs
 ```
@@ -104,9 +105,37 @@ Copying only `METADATA` into a fresh stub directory avoids this entirely.
 
 `setup-project.sh` replaces these in .json, .sh, and .py files:
 - `{{PROJECT_NAME}}` - Directory name
-- `{{DEV_USER}}` - Container username (hostname-devcontainer)
-- `{{DEV_UID}}` - Container user ID (default: 2112)
+- `{{DEV_USER}}` - Container username (`whoami`-devcontainer)
+- `{{DEV_UID}}` - Container user ID, derived from host via `$(id -u)`. Must match the host user's UID so bind-mounted workspace files are writable inside the container.
 - `{{GIT_NAME}}` / `{{GIT_EMAIL}}` - From host's git config
+
+## JetBrains Gateway Integration
+
+### How JetBrains Discovers the Python SDK
+
+JetBrains' uv SDK integration requires two things to find the project environment:
+
+1. **`UV_PROJECT_ENVIRONMENT`** set in `containerEnv` (devcontainer.json) — explicitly tells uv which `.venv` is the project environment. Without this, JetBrains' "Loading environments..." spinner runs indefinitely.
+2. **`uv.lock`** present in the workspace — JetBrains' uv integration calls uv project commands that require a lock file. `setup-environment.sh` runs `uv lock --project` after injecting NVIDIA constraints, creating the lock file without installing anything.
+
+### UID Must Match Host User
+
+The workspace is bind-mounted from the host. The container user's UID (set via `{{DEV_UID}}`) must match the host user's UID or the container user cannot write to any files. `setup-project.sh` uses `$(id -u)` to ensure this automatically. The Dockerfile deletes Ubuntu's pre-existing UID 1000 user, so any host UID is safe.
+
+### JetBrains Docker Image Naming
+
+JetBrains Gateway names devcontainer images as:
+```
+jb-devcontainer-{project_dir}_{devcontainer_name_normalized}:latest
+```
+where the devcontainer `name` field is lowercased with spaces replaced by underscores.
+
+**Shared images** (do NOT delete between test iterations):
+- `jb-{hash}-uid:latest` — UID-remapped base image (22GB, expensive to rebuild)
+- `jb-devcontainer-features-{hash}:latest` — devcontainer features layer
+- `jetbrains/devcontainers-helper:*` — JetBrains tooling
+
+`iterate-test-jetbrains-env.sh` handles cleanup of only the project-specific image.
 
 ## Known Issues
 

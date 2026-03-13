@@ -32,7 +32,8 @@
     "HF_HOME": "/workspaces/{{PROJECT_NAME}}/.cache/huggingface",
     "TORCH_HOME": "/workspaces/{{PROJECT_NAME}}/.cache/torch",
     "TRANSFORMERS_CACHE": "/workspaces/{{PROJECT_NAME}}/.cache/huggingface/transformers",
-    "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock"
+    "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock",
+    "UV_PROJECT_ENVIRONMENT": "/workspaces/{{PROJECT_NAME}}/.venv"
   },
 
 
@@ -72,14 +73,19 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
-        "github.copilot",
         "ms-toolsai.jupyter"
       ]
     },
     "jetbrains": {
+      "backend": "IU",
       "plugins": [
-        "com.koxudaxi.ruff",
-        "com.github.copilot"
+        "PythonCore",
+        "net.ashald.envfile",
+        "ru.adelf.idea.dotenv",
+        "net.seesharpsoft.intellij.plugins.csv",
+        "nl.bryanderidder.regexrenamefiles",
+        "com.intellij.plugins.watcher",
+        "intellij.python.lsp"
       ]
     }
   },

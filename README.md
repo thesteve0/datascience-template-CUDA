@@ -5,8 +5,8 @@ Template for PyTorch ML projects optimized for 12GB VRAM GPUs with safe dependen
 ## What This Template Provides
 
 **Core Components:**
-- NVIDIA PyTorch container (25.04-py3) with CUDA support
-- VSCode devcontainer integration
+- NVIDIA PyTorch container (26.02-py3) with CUDA support
+- VSCode and JetBrains Gateway devcontainer integration
 - Persistent volumes for models, datasets, and caches
 - Safe dependency management that preserves NVIDIA's CUDA-optimized packages
 - External project integration with simple cloning
@@ -61,29 +61,38 @@ mkdir my-ml-project && cd my-ml-project
 Copy all template files (devcontainer.json, setup-environment.sh, resolve-dependencies.py, setup-project.sh, cleanup-script.sh) to project directory
 
 **3. Run Setup (HOST)**
+
+`setup-project.sh` will prompt you to choose your IDE (VSCode, JetBrains, or both):
 ```bash
 chmod +x setup-project.sh && ./setup-project.sh
+# Or specify IDE directly:
+./setup-project.sh --ide vscode
+./setup-project.sh --ide jetbrains
+./setup-project.sh --ide both
 ```
 
-**4. Open in VSCode (HOST)**
+**4a. Open in VSCode (HOST)**
 ```bash
 code .
 ```
+VSCode will prompt: "Reopen in Container" — or use Command Palette: `Dev Containers: Reopen in Container`
 
-**5. Reopen in Container**
-- VSCode will prompt: "Reopen in Container"
-- Or use Command Palette: `Dev Containers: Reopen in Container`
+**4b. Open in JetBrains Gateway (HOST)**
+1. Open JetBrains Gateway
+2. New Connection > Dev Containers > select the project folder
+3. Gateway builds the container and opens PyCharm/IntelliJ inside it
+4. When prompted to configure a Python SDK: select **uv**, path `/usr/local/bin/uv`, **Select existing** environment — the `.venv` will appear automatically
 
-**6. Install Dependencies (DEVCONTAINER)**
+**5. Install Dependencies (DEVCONTAINER)**
 ```bash
 # Add packages directly — uv handles NVIDIA conflict avoidance automatically
 uv add transformers datasets accelerate wandb
 ```
 
-**7. Verify Setup (DEVCONTAINER)**
+**6. Verify Setup (DEVCONTAINER)**
 ```bash
-# Test GPU access
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+python test-gpu.py
 ```
 
 ### Option B: External Project Integration
@@ -112,15 +121,9 @@ This automatically:
 - Adds cloned repo to .gitignore
 - Configures devcontainer for external repo access
 
-**4. Open in VSCode (HOST)**
-```bash
-code .
-```
+**4. Open in your IDE and start the devcontainer** (see step 4a/4b above)
 
-**5. Reopen in Container**
-VSCode will prompt to reopen in container
-
-**6. Test Integration (DEVCONTAINER)**
+**5. Test Integration (DEVCONTAINER)**
 ```bash
 # Test external project
 cd cloned-repo && python --version
@@ -129,7 +132,7 @@ cd cloned-repo && python --version
 python -c "import sys; print(sys.path)"
 ```
 
-**7. Install Dependencies (DEVCONTAINER)**
+**6. Install Dependencies (DEVCONTAINER)**
 ```bash
 # Add packages directly — uv handles NVIDIA conflict avoidance automatically
 uv add -r external-repo/requirements.txt
@@ -497,14 +500,15 @@ mkdir project-b && cd project-b
 ## Current Status
 
 ✅ **Completed:**
-- Devcontainer configuration with GPU access
-- Dependency conflict resolution system
+- Devcontainer configuration with GPU access (NVIDIA 26.02-py3)
+- Safe dependency management via uv with NVIDIA package isolation
 - External project integration with simple cloning
-- Project structure and tooling setup
-- VSCode integration with Python extensions
+- Project structure and tooling setup (ruff, pre-commit)
+- VSCode integration with Python extensions and Ruff
+- JetBrains Gateway integration (PyCharm/IntelliJ) with automatic SDK discovery
+- IDE selection prompt in `setup-project.sh` (VSCode / JetBrains / both)
 
 🔄 **Future Enhancements:**
-- GUI for dependency management
 - Additional ML framework templates
 - Automated testing integration
 - Multi-GPU support configuration

@@ -11,10 +11,12 @@ Porting 25+ improvements from `datascience-template-ROCm` to `datascience-templa
 | 1 | Update Base Container | **VERIFIED** - GPU works, torch imports |
 | 2 | Virtual Environment with .pth Bridge | **VERIFIED** |
 | 3 | Dependency Resolution with uv | **VERIFIED** |
-| 4 | setup-project.sh with IDE Selection | **DONE** - --ide flag, interactive prompt, .idea/ generation |
+| 4 | setup-project.sh with IDE Selection | **VERIFIED** - --ide flag, interactive prompt, .idea/ generation |
 | 5 | GPU Testing Scripts | **VERIFIED** - test-gpu.py only (hello-gpu.py removed as requirement) |
-| 6 | devcontainer.json for Ruff + JetBrains | **DONE** - ruff settings/extensions + jetbrains plugins block |
-| 7 | Documentation | Not started |
+| 6 | devcontainer.json for Ruff + JetBrains | **VERIFIED** - ruff settings/extensions + jetbrains plugins block |
+| 6a | JetBrains SDK Discovery Fixes | **VERIFIED** - UV_PROJECT_ENVIRONMENT, uv lock in setup-environment.sh |
+| 6b | UID/Permissions Fix | **VERIFIED** - DEV_UID=$(id -u) in setup-project.sh |
+| 7 | Documentation | **DONE** - CLAUDE.md, README.md updated |
 
 ---
 
@@ -128,7 +130,34 @@ python test-gpu.py               # Full benchmark (~2-3 min)
 
 ---
 
-## Phase 6: devcontainer.json for Ruff (NOT STARTED)
+## Phase 6a: JetBrains SDK Discovery Fixes (VERIFIED)
+
+### Problem
+JetBrains Gateway's "Add Python Interpreter" dialog (uv type, Select existing) spun indefinitely on "Loading environments...".
+
+### Root Causes and Fixes
+
+**1. `UV_PROJECT_ENVIRONMENT` not set**
+JetBrains calls uv to enumerate environments; without this env var uv has no way to know where the project venv lives.
+- Fix: Added `"UV_PROJECT_ENVIRONMENT": "/workspaces/{{PROJECT_NAME}}/.venv"` to `containerEnv` in `devcontainer.json`.
+
+**2. No `uv.lock` file**
+JetBrains' uv integration runs project-mode uv commands that require a lock file. Without it, uv tries to resolve 200+ NVIDIA packages from PyPI, causing the spinner.
+- Fix: Added `uv lock --project ${WORKSPACE_DIR}` to `setup-environment.sh`, after NVIDIA constraints are injected into `pyproject.toml`. Safe: resolves only, installs nothing.
+
+---
+
+## Phase 6b: UID/Permissions Fix (VERIFIED)
+
+### Problem
+Container user was UID 2112 (hardcoded `DEV_UID=2112`). Workspace bind mount owned by host user UID 1000. Result: `Permission denied` on every write, `setup-environment.sh` postCreateCommand failed silently.
+
+### Fix
+Changed `setup-project.sh` line 41 from `DEV_UID=2112` to `DEV_UID=$(id -u)`. The Dockerfile already deletes Ubuntu's pre-existing UID 1000 user, so any host UID is safe to use.
+
+---
+
+## Phase 6: devcontainer.json for Ruff (VERIFIED)
 
 ### Planned Changes
 **File:** `devcontainer.json`
@@ -152,25 +181,20 @@ Add JetBrains customization block.
 
 ---
 
-## Phase 7: Documentation (NOT STARTED)
+## Phase 7: Documentation (DONE)
 
-### Planned Changes
-**New files:**
-- `QUICKSTART.md` - 15-minute setup guide
-- `TESTING.md` - Validation report
+### Changes Made
+**Updated:**
+- `CLAUDE.md` - Added JetBrains Gateway Integration section (UV_PROJECT_ENVIRONMENT, uv lock, UID requirement, Docker image naming). Updated DEV_UID placeholder description. Updated file list.
+- `README.md` - Fixed container version (25.04 → 26.02), added JetBrains to Quick Start (--ide flag, Gateway steps, SDK configuration), updated Current Status to reflect JetBrains support.
+- `IMPLEMENTATION-PROGRESS.md` - All phases marked with final status, new phases 6a/6b added.
 
-**Update:**
-- `CLAUDE.md` - Architecture overview, .pth bridge explanation
+**Also completed:**
+- Deleted `addingClaudeCode.md` ✅
+- Deleted `resolve-dependencies.py` ✅ (replaced by uv workflow with pyproject.toml)
 
-**Delete:**
-- `addingClaudeCode.md` - Per user request
-
-### Manual Verification Required
-```bash
-# Review documentation files for accuracy
-ls QUICKSTART.md TESTING.md CLAUDE.md
-ls addingClaudeCode.md           # Should fail (file deleted)
-```
+**Not done (deferred):**
+- `QUICKSTART.md` - 15-minute setup guide (future)
 
 ---
 
@@ -202,11 +226,9 @@ ls addingClaudeCode.md           # Should fail (file deleted)
 3. `QUICKSTART.md` - 15-minute setup guide
 4. `TESTING.md` - Validation report
 
-### To Delete
-1. `addingClaudeCode.md` - Remove Claude Code integration docs
-
-### To Deprecate
-1. `resolve-dependencies.py` - Replaced by uv workflow with pyproject.toml
+### Deleted
+1. `addingClaudeCode.md` ✅
+2. `resolve-dependencies.py` ✅ (replaced by uv workflow with pyproject.toml)
 
 ---
 

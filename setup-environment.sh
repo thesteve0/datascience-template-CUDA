@@ -114,6 +114,13 @@ with open(pyproject_path, 'w') as f:
 print(f'Injected {len(constraints)} NVIDIA package constraints into pyproject.toml')
 "
 
+# Generate uv.lock so JetBrains' uv SDK integration can discover the project environment.
+# uv lock resolves dependencies and writes the lock file without installing anything.
+# Since dependencies = [] at this point, resolution is trivial and fast.
+# Without uv.lock, JetBrains hangs indefinitely on "Loading environments..." in the SDK dialog.
+echo "Generating uv.lock for IDE integration..."
+uv lock --project ${WORKSPACE_DIR}
+
 # Install development tools into the project venv (not system Python)
 echo "Installing development tools (ruff, pre-commit)..."
 uv pip install --python ${WORKSPACE_DIR}/.venv/bin/python ruff pre-commit

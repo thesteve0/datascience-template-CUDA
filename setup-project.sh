@@ -35,10 +35,11 @@ GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
 
 # Define the username and user ID for inside the container.
-# WARNING: Changing DEV_UID to a value that already exists in the base image
-# (like 1000) will cause the container build to fail. Use 1001 for reliability.
+# DEV_UID matches the host user's UID so that bind-mounted workspace files
+# are writable inside the container. The Dockerfile deletes the ubuntu user
+# (UID 1000) before common-utils runs, so any host UID is safe to use here.
 DEV_USER=$(whoami)-devcontainer
-DEV_UID=2112
+DEV_UID=$(id -u)
 
 # ==============================================================================
 # --- IDE Selection ---
