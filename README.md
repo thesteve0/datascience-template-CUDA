@@ -58,7 +58,7 @@ mkdir my-ml-project && cd my-ml-project
 ```
 
 **2. Copy Template Files (HOST)**
-Copy all template files (devcontainer.json, setup-environment.sh, resolve-dependencies.py, setup-project.sh, cleanup-script.sh) to project directory
+Copy all template files (devcontainer.json, setup-environment.sh, setup-project.sh, Dockerfile) to project directory
 
 **3. Run Setup (HOST)**
 
@@ -76,6 +76,8 @@ chmod +x setup-project.sh && ./setup-project.sh
 code .
 ```
 VSCode will prompt: "Reopen in Container" — or use Command Palette: `Dev Containers: Reopen in Container`
+
+Installed extensions include: Python, Pylance, Ruff, Jupyter, and GitHub Copilot.
 
 **4b. Open in JetBrains Gateway (HOST)**
 1. Open JetBrains Gateway
@@ -146,8 +148,7 @@ my-ml-project/
 ├── .devcontainer/
 │   ├── devcontainer.json              # Container configuration
 │   └── setup-environment.sh           # Environment setup script
-├── scripts/
-│   └── resolve-dependencies.py        # Dependency conflict resolver
+├── template_docs/                      # Template reference documentation
 ├── src/my-ml-project/                  # Main package code
 ├── configs/                            # Configuration files
 ├── tests/                              # Test files
@@ -157,9 +158,9 @@ my-ml-project/
 │   ├── huggingface/
 │   └── torch/
 ├── requirements.txt                    # Your dependencies
-├── requirements-filtered.txt           # Filtered requirements (auto-generated)
 ├── nvidia-provided.txt                 # NVIDIA packages (auto-generated)
 ├── pyproject.toml                      # Project configuration
+├── GETTING_STARTED.md                  # First-time setup checklist
 └── README.md
 ```
 
@@ -169,8 +170,7 @@ my-ml-project/
 ├── .devcontainer/
 │   ├── devcontainer.json              # Container configuration
 │   └── setup-environment.sh           # Environment setup script
-├── scripts/
-│   └── resolve-dependencies.py        # Dependency conflict resolver
+├── template_docs/                      # Template reference documentation
 ├── external-repo/                     # Cloned repository (in .gitignore)
 │   ├── src/                            # Original project structure
 │   ├── data/                           # Original data directory
@@ -178,8 +178,8 @@ my-ml-project/
 │   └── ...                             # All original files preserved
 ├── .gitignore                          # Contains external-repo/
 ├── requirements.txt                    # Your dependencies
-├── requirements-filtered.txt           # Filtered requirements (auto-generated)
 ├── nvidia-provided.txt                 # NVIDIA packages (auto-generated)
+├── GETTING_STARTED.md                  # First-time setup checklist
 └── README.md
 ```
 
@@ -332,9 +332,9 @@ git push origin my-feature
 # Install pre-commit hooks
 pre-commit install
 
-# Run code formatting
-black src/ tests/
-flake8 src/ tests/
+# Run code formatting and linting
+ruff check .
+ruff format .
 
 # Run pre-commit on all files
 pre-commit run --all-files
@@ -362,9 +362,8 @@ python -c "import sys; print('\n'.join(sys.path))"
 # Check external repo for dependency files
 ls external-repo/ | grep -E "(requirements|environment|pyproject)"
 
-# Extract and filter dependencies
-# Note: uv automatically avoids overwriting NVIDIA packages — no filtering step needed
-sudo uv pip install --system -r requirements-filtered.txt
+# Install dependencies safely — uv automatically avoids overwriting NVIDIA packages
+uv add -r requirements.txt
 ```
 
 **Working with forks:**

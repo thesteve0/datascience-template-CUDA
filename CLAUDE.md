@@ -56,7 +56,7 @@ uv remove numpy  # (or any other NVIDIA-provided package)
 - `Dockerfile` - Wraps NVIDIA PyTorch container, removes Ubuntu 24.04's pre-existing `ubuntu` user to free UID 1000 for the container dev user
 - `devcontainer.json` - Container config with GPU access, named volumes, SSH agent forwarding, VSCode and JetBrains customizations
 - `setup-environment.sh` - Runs inside container on creation; creates venv, .pth bridge, stub dist-info entries, injects constraints into pyproject.toml, runs `uv lock` (for IDE discovery), installs dev tools
-- `setup-project.sh` - Runs on host to initialize project structure, replace template placeholders, and generate IDE config files
+- `setup-project.sh` - Runs on host to initialize project structure, replace template placeholders, generate IDE config files, move template docs to `template_docs/`, and generate user-facing skeleton files (`GETTING_STARTED.md`, `README.md`, `CLAUDE.md`)
 - `iterate-test-jetbrains-env.sh` - Teardown/rebuild helper for iterating on JetBrains devcontainer setup during development
 
 ### After setup-project.sh runs
@@ -66,8 +66,13 @@ project/
 │   ├── Dockerfile
 │   ├── devcontainer.json
 │   └── setup-environment.sh
-├── scripts/
-│   └── resolve-dependencies.py
+├── template_docs/               # Template reference documentation
+│   ├── CLAUDE.md
+│   ├── README.md
+│   └── ...
+├── GETTING_STARTED.md           # First-time setup checklist (shown on container start)
+├── README.md                    # User project README (skeleton)
+├── CLAUDE.md                    # User project Claude guidance (skeleton)
 ├── src/{project-name}/          # Standalone mode
 │   └── __init__.py
 └── {cloned-repo}/               # External repo mode (in .gitignore)
@@ -141,6 +146,26 @@ where the devcontainer `name` field is lowercased with spaces replaced by unders
 
 **torchao/transformers conflict**: NVIDIA's bundled torchao may be incompatible with newer transformers versions (4.50+). May need to pin `transformers<4.50`. See NEXT-SESSION-TODO.md for details.
 
-## Claude Code Integration (Optional)
+## Claude Code Integration
 
-See `addingClaudeCode.md` for instructions on adding Claude Code with Google Vertex AI authentication to the devcontainer.
+Claude Code is included automatically via the `ghcr.io/anthropics/devcontainer-features/claude-code:1` feature in `devcontainer.json` — no manual setup required.
+
+### Required Host Environment Variables
+
+Set these on your host machine before opening the devcontainer:
+
+```bash
+export ANTHROPIC_VERTEX_PROJECT_ID="your-gcp-project-id"
+export ANTHROPIC_VERTEX_REGION="us-east5"
+export CLAUDE_CODE_USE_VERTEX="true"
+```
+
+The devcontainer passes these through automatically via `containerEnv`.
+
+### Authentication
+
+gcloud credentials are mounted read-only from `~/.config/gcloud` on your host into the container. Authenticate on the host before starting the devcontainer:
+
+```bash
+gcloud auth application-default login
+```

@@ -8,10 +8,11 @@
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
       "username": "{{DEV_USER}}",
-      "userUid": "{{DEV_UID}}",
-      "userGid": "{{DEV_UID}}",
+      "uid": "{{DEV_UID}}",
+      "gid": "{{DEV_UID}}",
       "upgradePackages": false
-    }
+    },
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
 
   "runArgs": [
@@ -21,7 +22,11 @@
     "--cpus=8",
     "--ulimit=memlock=-1",
     "--ulimit=stack=67108864",
-    "--mount", "type=bind,source=${env:SSH_AUTH_SOCK},target=/tmp/ssh-agent.sock"
+    "--cap-add=SYS_PTRACE",
+    "--security-opt=seccomp=unconfined",
+    "--mount", "type=bind,source=${env:SSH_AUTH_SOCK},target=/tmp/ssh-agent.sock",
+    "--mount", "type=bind,source=${localEnv:HOME}/.config/gcloud,target=/home/{{DEV_USER}}/.config/gcloud,readonly",
+    "--mount", "type=bind,source=${localEnv:HOME}/data,target=/data"
   ],
 
   "containerEnv": {
@@ -33,7 +38,11 @@
     "TORCH_HOME": "/workspaces/{{PROJECT_NAME}}/.cache/torch",
     "TRANSFORMERS_CACHE": "/workspaces/{{PROJECT_NAME}}/.cache/huggingface/transformers",
     "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock",
-    "UV_PROJECT_ENVIRONMENT": "/workspaces/{{PROJECT_NAME}}/.venv"
+    "UV_PROJECT_ENVIRONMENT": "/workspaces/{{PROJECT_NAME}}/.venv",
+    "VIRTUAL_ENV": "/workspaces/{{PROJECT_NAME}}/.venv",
+    "ANTHROPIC_VERTEX_PROJECT_ID": "${localEnv:ANTHROPIC_VERTEX_PROJECT_ID}",
+    "ANTHROPIC_VERTEX_REGION": "${localEnv:ANTHROPIC_VERTEX_REGION}",
+    "CLAUDE_CODE_USE_VERTEX": "${localEnv:CLAUDE_CODE_USE_VERTEX}"
   },
 
 
@@ -61,19 +70,22 @@
         },
         "terminal.integrated.defaultProfile.linux": "bash",
         "editor.formatOnSave": true,
-        "editor.defaultFormatter": "charliermarsh.ruff",
         "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff"
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
         },
         "ruff.enable": true,
-        "ruff.lint.enable": true,
-        "ruff.format.enable": true
+        "ruff.organizeImports": true
       },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
-        "ms-toolsai.jupyter"
+        "ms-toolsai.jupyter",
+        "GitHub.copilot"
       ]
     },
     "jetbrains": {
@@ -90,9 +102,10 @@
     }
   },
 
-  "forwardPorts": [6006],
+  "forwardPorts": [6006, 8888],
 
   "postCreateCommand": ".devcontainer/setup-environment.sh",
+  "postStartCommand": "cat /workspaces/{{PROJECT_NAME}}/GETTING_STARTED.md 2>/dev/null || true",
   "hostRequirements": {
     "gpu": true,
     "memory": "24gb"

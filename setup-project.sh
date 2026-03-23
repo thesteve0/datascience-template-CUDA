@@ -76,6 +76,13 @@ find . \( -name "*.json" -o -name "*.sh" -o -name "*.py" -o -name "*.toml" \) | 
     -e "s/{{DEV_UID}}/$DEV_UID/g"
 
 
+# Create template_docs/ and move template reference documentation into it.
+# This keeps the project root clean for user-facing files.
+mkdir -p template_docs
+for doc in README.md QUICKSTART.md IMPLEMENTATION-PROGRESS.md PRODUCTION-DEPLOYMENT.md CHANGELOG.md NEXT-SESSION-TODO.md CLAUDE.md; do
+    [ -f "$doc" ] && mv "$doc" template_docs/ || true
+done
+
 # Create base directories and move devcontainer infrastructure files.
 # These are always needed regardless of IDE — both VSCode and JetBrains Gateway
 # read .devcontainer/devcontainer.json to launch the container.
@@ -83,7 +90,28 @@ mkdir -p .devcontainer scripts
 mv Dockerfile .devcontainer/
 mv devcontainer.json .devcontainer/
 mv setup-environment.sh .devcontainer/
-mv resolve-dependencies.py scripts/
+[ -f resolve-dependencies.py ] && mv resolve-dependencies.py scripts/ || true
+
+# Generate user-facing skeleton files in the project root.
+cat > "GETTING_STARTED.md" << SKELETONEOF
+# Getting Started with ${PROJECT_NAME}
+
+## First-time setup checklist
+- [ ] Verify GPU: \`python -c "import torch; print(torch.cuda.is_available())"\`
+- [ ] Add your first package: \`uv add <package-name>\`
+- [ ] Run formatter check: \`ruff check .\`
+- [ ] Reference docs in template_docs/ for dependency management notes
+SKELETONEOF
+
+cat > "README.md" << SKELETONEOF
+# ${PROJECT_NAME}
+SKELETONEOF
+
+cat > "CLAUDE.md" << SKELETONEOF
+# CLAUDE.md
+
+Project-specific guidance for Claude Code.
+SKELETONEOF
 
 # Generate JetBrains .idea/ configuration files.
 # These tell PyCharm/IntelliJ which Python SDK to use, enable Git, and configure
@@ -185,6 +213,9 @@ else
 
     # Create Python structure
     touch src/__init__.py src/${PROJECT_NAME}/__init__.py tests/__init__.py
+
+    # Marker file used as a signal that this was initialized in standalone mode
+    touch .standalone-project
 fi
 
 echo ""
